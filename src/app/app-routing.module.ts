@@ -6,6 +6,7 @@ import {
 } from './component/horse/horse-create-edit/horse-create-edit.component';
 import {HorseComponent} from './component/horse/horse.component';
 import {NodeComponent} from "./component/node/node.component";
+import {CanvasComponent} from "./component/canvas/canvas.component";
 
 
 const routes: Routes = [
@@ -16,6 +17,10 @@ const routes: Routes = [
   ]},
   {path: 'nodes', children: [
       {path: '', component: NodeComponent},
+      //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
+    ]},
+  {path: 'canvas', children: [
+      {path: '', component: CanvasComponent},
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
     ]},
   {path: '**', redirectTo: 'recipes'},
