@@ -13,11 +13,11 @@ export class CanvasComponent implements AfterViewInit {
   @ViewChild('canvasContainer', { static: false }) canvasContainer!: ElementRef;
 
   ngAfterViewInit(): void {
-    const canvasElement = this.canvasContainer.nativeElement;
+    const canvasElement = document.querySelector('#canvasContainer');
 
-    // Initialize the draw2d Canvas with a valid HTML element
-    const canvas = new draw2d.Canvas(canvasElement);
-
+    // Initialize the draw2d Canvas with the ID of a valid HTML element
+    const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : 'Nope';
+    
     // Example: Adding a square (node) to the canvas
     const square = new draw2d.shape.basic.Rectangle({
       width: 50,
