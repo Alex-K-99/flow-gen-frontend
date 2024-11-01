@@ -35,8 +35,7 @@ export class NodeComponent {
           // Update each node's texture to the correct display format
           this.nodes = data.map(node => ({
             ...node,
-            texture: 'data:image/png;base64,' + node.texture
-          }));
+            texture: node.texture ? 'data:image/png;base64,' + node.texture : undefined          }));
         },
         error: error => {
           console.error('Error fetching nodes', error);

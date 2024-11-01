@@ -9,7 +9,7 @@
     <tr *ngFor="let node of nodes" class="center-td">
       <td>{{node.mcId}}</td>
       <td>
-        <img [src]="node.texture" alt="Texture Image" width="32" height="32" class="pixelated">
+        <img [src]="node.texture || 'assets/resources/placeholder_texture.png'"  alt="Texture Image" width="32" height="32" class="pixelated">
       </td>
       <td>
         <div class="btn-group">
