@@ -10,7 +10,7 @@ import {CanvasComponent} from "./component/canvas/canvas.component";
 
 
 const routes: Routes = [
-  {path: '', redirectTo: 'recipes', pathMatch: 'full'},
+  {path: '', redirectTo: 'nodes', pathMatch: 'full'},
   {path: 'horses', children: [
     {path: '', component: HorseComponent},
     {path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
