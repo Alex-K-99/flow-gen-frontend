@@ -65,19 +65,16 @@ export class CanvasComponent implements AfterViewInit {
       mcid
       coords
       */
-      const dataObj = {
-        mcid: mcid_input.value,
-        screenX: screenX_input.value,
-        screenY: screenY_input.value,
-      }
-      fetch('#', {
+      // console.log(new FormData(form));
+      fetch('http://localhost:8080/nodes', {
         method: 'POST',
-        body: JSON.stringify(dataObj),
+        body: new FormData(form),
       })
       .then(response => response.text())
       .then(result => {
         // Handle response
-        // console.log(result);
+        
+        console.log(result);
       })
       .catch(er => console.log(er))
     })
@@ -85,6 +82,11 @@ export class CanvasComponent implements AfterViewInit {
 
   drawNode(canvas :any, mcid :String, shape :Object) :Boolean {
     canvas.add(shape);
+    
+    return true;
+  }
+
+  sendRequest() :Boolean {
     
     return true;
   }
