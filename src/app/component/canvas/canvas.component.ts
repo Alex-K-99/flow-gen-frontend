@@ -17,6 +17,7 @@ export class CanvasComponent implements AfterViewInit {
     const canvasElement = document.querySelector('#canvasContainer');
     // Initialize the draw2d Canvas with the ID of a valid HTML element
     const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : null;
+    
 
 
     //------- Form Setup -------------
@@ -32,6 +33,9 @@ export class CanvasComponent implements AfterViewInit {
         mcid_input.value = currentNode.id;
         screenX_input.value = currentNode.x;
         screenY_input.value = currentNode.y;
+        this.sendRequest("/nodes", "PUT", form);
+
+        // canvas.getPrimarySelection().getPorts();
       } else {
         return;
       }
@@ -46,7 +50,7 @@ export class CanvasComponent implements AfterViewInit {
         height: 50,
         x: 100,
         y: 100,
-        bgColor: '#00ee00'
+        bgColor: '#00ee00',
       });
 
       // Check if given minecraft ID already exists as a node
@@ -60,34 +64,40 @@ export class CanvasComponent implements AfterViewInit {
       }
       
       
-      /*
-      Send request with:
-      mcid
-      coords
-      */
-      // console.log(new FormData(form));
-      fetch('http://localhost:8080/nodes', {
-        method: 'POST',
-        body: new FormData(form),
-      })
-      .then(response => response.text())
-      .then(result => {
-        // Handle response
-        
-        console.log(result);
-      })
-      .catch(er => console.log(er))
+      // Send request with FormData
+      this.sendRequest("/nodes", "POST", form);
     })
   }
 
-  drawNode(canvas :any, mcid :String, shape :Object) :Boolean {
+  drawNode(canvas :any, mcid :String, shape :any) :Boolean {
+    // Ports to shape
+    for(let i = 0; i < 4; i++) {
+      shape.createPort("hybrid", new draw2d.layout.locator.InputPortLocator());
+      shape.createPort("hybrid", new draw2d.layout.locator.OutputPortLocator());
+    }
+    console.log(shape.getPorts());
     canvas.add(shape);
+    console.log(canvas.getFigures());
     
     return true;
   }
 
-  sendRequest() :Boolean {
-    
+  sendRequest(endpoint :String, method :string, form :HTMLFormElement) :Boolean {
+    fetch(`http://localhost:8080${endpoint}`, {
+      method: method,
+      body: new FormData(form),
+    })
+    .then(response => response.text())
+    .then(result => {
+      // Handle response
+      
+      console.log(result);
+    })
+    .catch(er => {
+      console.log(er);
+      return false;
+    })
+
     return true;
   }
 }
