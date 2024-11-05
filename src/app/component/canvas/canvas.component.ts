@@ -26,6 +26,31 @@ export class CanvasComponent implements AfterViewInit {
     const screenX_input = <HTMLInputElement>document.querySelector('#screenX-input');
     const screenY_input = <HTMLInputElement>document.querySelector('#screenY-input');
 
+    //--------------------------------
+    // canvas.on("select", (emitter:any, event:any) => {
+    //   console.log(emitter);
+    //   console.log(event);
+      
+    // })
+    //--------------------------------
+
+    fetch("http://localhost:8080/nodes")
+    .then(response => response.json())
+    .then(result => {
+      // console.log(result);
+      result.forEach((node :any) => {
+        this.drawNode(canvas, node.id, new draw2d.shape.basic.Rectangle({
+          width: 50,
+          height: 50,
+          x: node.screenX,
+          y: node.screenY,
+          bgColor: '#00ee00',
+        }))
+      });
+      // console.log(document.querySelector("#canvasContainer svg"));
+    })
+    .catch(er => console.log(er))
+
     canvasElement?.addEventListener('mouseup', () => {
       const currentNode = canvas.getPrimarySelection();
       if(currentNode) {
@@ -33,9 +58,8 @@ export class CanvasComponent implements AfterViewInit {
         mcid_input.value = currentNode.id;
         screenX_input.value = currentNode.x;
         screenY_input.value = currentNode.y;
-        this.sendRequest("/nodes", "PUT", form);
 
-        // canvas.getPrimarySelection().getPorts();
+        this.sendRequest("/nodes", "PUT", form);
       } else {
         return;
       }
@@ -45,7 +69,7 @@ export class CanvasComponent implements AfterViewInit {
       e.preventDefault();
       // Example: Adding a square to the canvas
       const square = new draw2d.shape.basic.Rectangle({
-        id: mcid_input.value,
+        // id: mcid_input.value,
         width: 50,
         height: 50,
         x: 100,
@@ -70,14 +94,29 @@ export class CanvasComponent implements AfterViewInit {
   }
 
   drawNode(canvas :any, mcid :String, shape :any) :Boolean {
-    // Ports to shape
-    for(let i = 0; i < 4; i++) {
-      shape.createPort("hybrid", new draw2d.layout.locator.InputPortLocator());
-      shape.createPort("hybrid", new draw2d.layout.locator.OutputPortLocator());
-    }
-    console.log(shape.getPorts());
+    // Ports to shape (simple)
+    const inputPort = shape.createPort("input");
+    const outputPort = shape.createPort("output");
+
+
+    inputPort.on("connect", (emitterPort:any, connection:any) => {
+      // Get StartNode and EndNode when new Connection is created
+      const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
+      const endNode = emitterPort.parent;
+      
+      
+      
+      
+    })
+    // for(let i = 0; i < 2; i++) {
+    //   shape.createPort("hybrid", new draw2d.layout.locator.InputPortLocator());
+    //   shape.createPort("hybrid", new draw2d.layout.locator.OutputPortLocator());
+    // }
+    shape.id = mcid;
+
+    // console.log(shape.getPorts());
     canvas.add(shape);
-    console.log(canvas.getFigures());
+    // console.log(canvas.getFigures());
     
     return true;
   }
