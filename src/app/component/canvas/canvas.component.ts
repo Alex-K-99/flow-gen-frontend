@@ -18,7 +18,8 @@ export class CanvasComponent implements AfterViewInit {
     // Initialize the draw2d Canvas with the ID of a valid HTML element
     const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : null;
     
-
+    // console.log(canvasElement?.id);
+    
 
     //------- Form Setup -------------
     const form          = <HTMLFormElement>document.querySelector('#node-form');
@@ -37,17 +38,35 @@ export class CanvasComponent implements AfterViewInit {
     fetch("http://localhost:8080/nodes")
     .then(response => response.json())
     .then(result => {
-      // console.log(result);
+      console.log(result);
       result.forEach((node :any) => {
         this.drawNode(canvas, node.id, new draw2d.shape.basic.Rectangle({
+          id: node.id,
           width: 50,
           height: 50,
           x: node.screenX,
           y: node.screenY,
           bgColor: '#00ee00',
         }))
+
+        canvas.getFigures().data.forEach((element:any) => {
+          if(node.id === element.id) {
+            element.add(new draw2d.shape.basic.Label({
+              id: `Label for ${node.mcId}`,
+              text: node.mcId, 
+              x: 0, 
+              y: -25
+            }), new draw2d.layout.locator.DraggableLocator());
+          }
+        });
+
       });
       // console.log(document.querySelector("#canvasContainer svg"));
+      // match.add(new draw2d.shape.basic.Label({
+      //   text: element.mcId, 
+      //   x: 0, 
+      //   y: 0
+      // }), new draw2d.layout.locator.DraggableLocator());
     })
     .catch(er => console.log(er))
 
@@ -59,7 +78,14 @@ export class CanvasComponent implements AfterViewInit {
         screenX_input.value = currentNode.x;
         screenY_input.value = currentNode.y;
 
-        this.sendRequest("/nodes", "PUT", form);
+        const formData = new FormData();
+        formData.append("id", currentNode.id);
+        formData.append("screenX", currentNode.x);
+        formData.append("screenY", currentNode.y);
+
+
+        this.sendRequest("/nodes", "PUT", formData);
+        
       } else {
         return;
       }
@@ -69,7 +95,7 @@ export class CanvasComponent implements AfterViewInit {
       e.preventDefault();
       // Example: Adding a square to the canvas
       const square = new draw2d.shape.basic.Rectangle({
-        // id: mcid_input.value,
+        id: mcid_input.value,
         width: 50,
         height: 50,
         x: 100,
@@ -77,59 +103,97 @@ export class CanvasComponent implements AfterViewInit {
         bgColor: '#00ee00',
       });
 
+      // ---------------- not currently working --------------------------
       // Check if given minecraft ID already exists as a node
       if(!canvas.getFigures().data.find((obj:any) => obj.id === square.id)) {
-        this.drawNode(canvas, mcid_input.value, square);
+        this.drawNode(canvas, square.id, square);
         screenX_input.value = square.x;
         screenY_input.value = square.y;
       } else {
         // Handle duplicates
         return;
       }
+      //-------------------------------------------------------------------
+      
+      const formData = new FormData(form);
+      // Temporary Hardcode
+      formData.append("canvasId", "-1");
       
       
       // Send request with FormData
-      this.sendRequest("/nodes", "POST", form);
+      this.sendRequest("/nodes", "POST", formData);
     })
   }
 
-  drawNode(canvas :any, mcid :String, shape :any) :Boolean {
+  drawNode(canvas :any, mcid :any, shape :any) :Boolean {
     // Ports to shape (simple)
     const inputPort = shape.createPort("input");
     const outputPort = shape.createPort("output");
 
 
     inputPort.on("connect", (emitterPort:any, connection:any) => {
+      // Add arrow Decorator
+      connection.connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
+      connection.connection.add(new draw2d.shape.basic.Label({
+        text: 0,
+      }), new draw2d.layout.locator.ManhattanMidpointLocator());
+      // console.log(connection.connection);
+      
+
       // Get StartNode and EndNode when new Connection is created
       const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
       const endNode = emitterPort.parent;
-      
-      
-      
-      
-    })
-    // for(let i = 0; i < 2; i++) {
-    //   shape.createPort("hybrid", new draw2d.layout.locator.InputPortLocator());
-    //   shape.createPort("hybrid", new draw2d.layout.locator.OutputPortLocator());
-    // }
-    shape.id = mcid;
 
-    // console.log(shape.getPorts());
+      const formData = new FormData();
+      formData.append("from", startNode.id);
+      formData.append("to", endNode.id);
+
+      // Temporary Hardcode-------
+      formData.append("amount", "1");
+      formData.append("canvasId", "-1");
+      //--------------------------
+      
+      this.sendRequest("/edges", "POST", formData)
+    })
+    shape.id = mcid;
+    
     canvas.add(shape);
+
+    // Apply Labels (könnt besser gehn)
+    // fetch("http://localhost:8080/nodes")
+    // .then(response => response.json())
+    // .then(res => {
+    //   console.log(res);
+
+      
+    //   // res.forEach((element:any) => {
+    //   //   let match = canvas.getFigures().data.find((obj:any) => obj.id === element.id);
+    //   //   if(match) {
+    //   //     match.add(new draw2d.shape.basic.Label({
+    //   //       text: element.mcId, 
+    //   //       x: 0, 
+    //   //       y: 0
+    //   //     }), new draw2d.layout.locator.DraggableLocator());
+    //   //   }
+
+    //   // });
+    // })
+    // .catch(er => console.log(er));
+
+
     // console.log(canvas.getFigures());
     
     return true;
   }
 
-  sendRequest(endpoint :String, method :string, form :HTMLFormElement) :Boolean {
+  sendRequest(endpoint :String, method :string, formData :FormData) :Boolean {
     fetch(`http://localhost:8080${endpoint}`, {
       method: method,
-      body: new FormData(form),
+      body: formData,
     })
-    .then(response => response.text())
+    .then(response => response.json())
     .then(result => {
       // Handle response
-      
       console.log(result);
     })
     .catch(er => {
