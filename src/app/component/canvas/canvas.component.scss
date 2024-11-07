@@ -3,3 +3,8 @@
   height: 600px;
   border: 1px solid #ccc;
 }
+
+::ng-deep .pixelated {
+  image-rendering: pixelated;
+  outline: 2px solid black;
+}

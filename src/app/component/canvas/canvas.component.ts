@@ -18,7 +18,7 @@ export class CanvasComponent implements AfterViewInit {
     // Initialize the draw2d Canvas with the ID of a valid HTML element
     const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : null;
     //--------------------------------
-    
+
 
     //------- Form Setup -------------
     const form          = <HTMLFormElement>document.querySelector('#node-form');
@@ -29,25 +29,34 @@ export class CanvasComponent implements AfterViewInit {
     const delete_button    = <HTMLButtonElement>document.querySelector('#delete-button');
 
 
-    //--------------------------------
+    //-------- Placeholder Texture ---
+    const placeholderPath = '/assets/resources/placeholder_texture.png';
 
     // Get all Nodes
     fetch("http://localhost:8080/nodes")
-    .then(response => response.json())
-    .then(result => {
-      // console.log(result);
-      result.forEach((node :any) => {
-        this.drawNode(canvas, node.mcId, new draw2d.shape.basic.Rectangle({
-          id: node.id,
-          width: 50,
-          height: 50,
-          x: node.screenX,
-          y: node.screenY,
-          bgColor: '#00ee00',
-        }))
-      });
-    })
-    .catch(er => console.log(er))
+      .then(response => response.json())
+      .then(result => {
+        result.forEach((node: any) => {
+          // Check if texture is available, otherwise use placeholder
+          const texturePath = node.texture
+            ? 'data:image/png;base64,' + node.texture
+            : placeholderPath;
+
+          const shape = new draw2d.shape.basic.Image({
+            id: node.id,
+            width: 48,
+            height: 48,
+            x: node.screenX,
+            y: node.screenY,
+            path: texturePath,
+            resizeable: false,
+            cssClass: 'pixelated'
+          });
+
+          this.drawNode(canvas, node.mcId, shape);
+        });
+      })
+      .catch(er => console.log(er));
 
     // // Get all Edges
     // fetch("http://localhost:8080/edges")
@@ -59,8 +68,7 @@ export class CanvasComponent implements AfterViewInit {
 
     canvasElement?.addEventListener('mouseup', () => {
       const currentNode = canvas.getPrimarySelection();
-      
-      
+
       // Exception for moving Labels and Connections
       if(currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
         // Enable deleteButton
@@ -68,7 +76,7 @@ export class CanvasComponent implements AfterViewInit {
 
         // Handle moved Node
         // console.log(currentNode);
-        
+
         // Get name of node from Label
         mcid_input.value = currentNode.children.data[0].figure.text;
 
@@ -81,7 +89,7 @@ export class CanvasComponent implements AfterViewInit {
         formData.append("screenY", currentNode.y);
 
         this.sendRequest("/nodes", "PUT", formData);
-        
+
       } else {
         return;
       }
@@ -105,13 +113,13 @@ export class CanvasComponent implements AfterViewInit {
       });
 
 
-      
-      
+
+
       const formData = new FormData(form);
       // Temporary Hardcode
       formData.append("canvasId", "-1");
       // -------------------
-      
+
       fetch(`http://localhost:8080/nodes`, {
         method: "POST",
         body: formData,
@@ -128,7 +136,7 @@ export class CanvasComponent implements AfterViewInit {
           alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
           return;
         }
-        
+
       })
       .catch(er => {
         console.log(er);
@@ -137,51 +145,55 @@ export class CanvasComponent implements AfterViewInit {
     })
   }
 
-  drawNode(canvas :any, mcid :any, shape :any, shapeId :any = null) :Boolean {
+  drawNode(canvas: any, mcid: any, shape: any, shapeId: any = null): Boolean {
     // Ports to shape (simple)
     const inputPort = shape.createPort("input");
     const outputPort = shape.createPort("output");
 
-
-    inputPort.on("connect", (emitterPort:any, connection:any) => {
-      // Add arrow Decorator
+    inputPort.on("connect", (emitterPort: any, connection: any) => {
       connection.connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
-      // Add Label (Customizable)
       let label = new draw2d.shape.basic.Label({
         text: 0,
-      })
+      });
       label.installEditor(new draw2d.ui.LabelEditor());
-
       connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
-      // console.log(connection.connection);
-      
 
-      // Get StartNode and EndNode when new Connection is created
       const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
       const endNode = emitterPort.parent;
 
       const formData = new FormData();
       formData.append("from", startNode.id);
       formData.append("to", endNode.id);
-
-      // Temporary Hardcode-------
-      formData.append("amount", "1");
+      formData.append("amount", "1"); // Temporary hardcoded value
       formData.append("canvasId", "-1");
-      //--------------------------
-      
-      this.sendRequest("/edges", "POST", formData)
-    })
 
-    shapeId ? shape.id = shapeId : null;
+      this.sendRequest("/edges", "POST", formData);
+    });
+
+    if (shapeId) {
+      shape.id = shapeId;
+    }
 
     shape.add(new draw2d.shape.basic.Label({
-      text: mcid, 
-      x: 0, 
+      text: mcid,
+      x: 0,
       y: -25
     }), new draw2d.layout.locator.DraggableLocator());
-    
+
     canvas.add(shape);
-    
+
+    // Access the <image> element inside the <svg> and apply styles
+    setTimeout(() => {
+      const svgElement = shape.canvas.paper.getById(shape.id)?.node;
+      if (svgElement) {
+        // Select the <image> element inside the <svg>
+        const imageElement = svgElement.querySelector("image");
+        if (imageElement) {
+          imageElement.classList.add("pixelated");
+        }
+      }
+    }, 50); // Adjust delay if needed to ensure the element is in the DOM
+
     return true;
   }
 
@@ -214,7 +226,7 @@ export class CanvasComponent implements AfterViewInit {
     .then(result => {
       // Handle response
       console.log(result);
-      
+
     })
     .catch(er => {
       console.log(er);
