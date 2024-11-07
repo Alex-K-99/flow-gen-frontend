@@ -26,6 +26,9 @@ export class CanvasComponent implements AfterViewInit {
     const screenX_input = <HTMLInputElement>document.querySelector('#screenX-input');
     const screenY_input = <HTMLInputElement>document.querySelector('#screenY-input');
 
+    const delete_button    = <HTMLButtonElement>document.querySelector('#delete-button');
+
+
     //--------------------------------
 
     // Get all Nodes
@@ -57,8 +60,12 @@ export class CanvasComponent implements AfterViewInit {
     canvasElement?.addEventListener('mouseup', () => {
       const currentNode = canvas.getPrimarySelection();
       
+      
       // Exception for moving Labels and Connections
       if(currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
+        // Enable deleteButton
+        delete_button.disabled = false;
+
         // Handle moved Node
         // console.log(currentNode);
         
@@ -79,6 +86,11 @@ export class CanvasComponent implements AfterViewInit {
         return;
       }
     });
+
+    delete_button?.addEventListener('click', () => {
+
+      this.deleteNode(form, delete_button, canvas, canvas.getPrimarySelection(), "/nodes");
+    })
 
     form.addEventListener('submit', e => {
       e.preventDefault();
@@ -106,8 +118,6 @@ export class CanvasComponent implements AfterViewInit {
       })
       .then(response => response.json())
       .then(result => {
-        // Handle response
-        console.log(result);
         // Check if given minecraft ID already exists as a node
         if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
           this.drawNode(canvas, mcid_input.value, square, result.id);
@@ -136,9 +146,13 @@ export class CanvasComponent implements AfterViewInit {
     inputPort.on("connect", (emitterPort:any, connection:any) => {
       // Add arrow Decorator
       connection.connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
-      connection.connection.add(new draw2d.shape.basic.Label({
+      // Add Label (Customizable)
+      let label = new draw2d.shape.basic.Label({
         text: 0,
-      }), new draw2d.layout.locator.ManhattanMidpointLocator());
+      })
+      label.installEditor(new draw2d.ui.LabelEditor());
+
+      connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
       // console.log(connection.connection);
       
 
@@ -171,12 +185,32 @@ export class CanvasComponent implements AfterViewInit {
     return true;
   }
 
+  deleteNode(form :HTMLFormElement, btn :HTMLButtonElement, canvas :any, node :any, endpoint :string) :Boolean {
+    let command = new draw2d.command.CommandDelete(node);
+    canvas.getCommandStack().execute(command);
+
+    const formData = new FormData();
+    formData.append("id", node.id);
+
+    this.sendRequest(endpoint, "DELETE", formData);
+
+    // Clear form
+    form.reset();
+
+    // Disable Delete Button
+    btn.disabled = true;
+
+    return true;
+
+
+  }
+
   sendRequest(endpoint :String, method :string, formData :FormData) :Boolean {
     fetch(`http://localhost:8080${endpoint}`, {
       method: method,
       body: formData,
     })
-    .then(response => response.json())
+    .then(response => response.text())
     .then(result => {
       // Handle response
       console.log(result);
