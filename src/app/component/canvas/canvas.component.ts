@@ -94,30 +94,40 @@ export class CanvasComponent implements AfterViewInit {
 
 
       
-      // Check if given minecraft ID already exists as a node
-      if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
-        this.drawNode(canvas, mcid_input.value, square);
-        screenX_input.value = square.x;
-        screenY_input.value = square.y;
-      } else {
-        // Handle duplicates
-        alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
-        return;
-      }
       
       const formData = new FormData(form);
       // Temporary Hardcode
       formData.append("canvasId", "-1");
       // -------------------
-
-      this.sendRequest("/nodes", "POST", formData);
-
-      // This is a shit
-      location.reload();
+      
+      fetch(`http://localhost:8080/nodes`, {
+        method: "POST",
+        body: formData,
+      })
+      .then(response => response.json())
+      .then(result => {
+        // Handle response
+        console.log(result);
+        // Check if given minecraft ID already exists as a node
+        if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
+          this.drawNode(canvas, mcid_input.value, square, result.id);
+          screenX_input.value = square.x;
+          screenY_input.value = square.y;
+        } else {
+          // Handle duplicates
+          alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
+          return;
+        }
+        
+      })
+      .catch(er => {
+        console.log(er);
+        return false;
+      })
     })
   }
 
-  drawNode(canvas :any, mcid :any, shape :any) :Boolean {
+  drawNode(canvas :any, mcid :any, shape :any, shapeId :any = null) :Boolean {
     // Ports to shape (simple)
     const inputPort = shape.createPort("input");
     const outputPort = shape.createPort("output");
@@ -148,7 +158,7 @@ export class CanvasComponent implements AfterViewInit {
       this.sendRequest("/edges", "POST", formData)
     })
 
-    // shape.id = mcid;
+    shapeId ? shape.id = shapeId : null;
 
     shape.add(new draw2d.shape.basic.Label({
       text: mcid, 
