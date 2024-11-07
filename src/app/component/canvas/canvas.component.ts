@@ -17,8 +17,7 @@ export class CanvasComponent implements AfterViewInit {
     const canvasElement = document.querySelector('#canvasContainer');
     // Initialize the draw2d Canvas with the ID of a valid HTML element
     const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : null;
-    
-    // console.log(canvasElement?.id);
+    //--------------------------------
     
 
     //------- Form Setup -------------
@@ -28,19 +27,14 @@ export class CanvasComponent implements AfterViewInit {
     const screenY_input = <HTMLInputElement>document.querySelector('#screenY-input');
 
     //--------------------------------
-    // canvas.on("select", (emitter:any, event:any) => {
-    //   console.log(emitter);
-    //   console.log(event);
-      
-    // })
-    //--------------------------------
 
+    // Get all Nodes
     fetch("http://localhost:8080/nodes")
     .then(response => response.json())
     .then(result => {
-      console.log(result);
+      // console.log(result);
       result.forEach((node :any) => {
-        this.drawNode(canvas, node.id, new draw2d.shape.basic.Rectangle({
+        this.drawNode(canvas, node.mcId, new draw2d.shape.basic.Rectangle({
           id: node.id,
           width: 50,
           height: 50,
@@ -48,33 +42,29 @@ export class CanvasComponent implements AfterViewInit {
           y: node.screenY,
           bgColor: '#00ee00',
         }))
-
-        canvas.getFigures().data.forEach((element:any) => {
-          if(node.id === element.id) {
-            element.add(new draw2d.shape.basic.Label({
-              id: `Label for ${node.mcId}`,
-              text: node.mcId, 
-              x: 0, 
-              y: -25
-            }), new draw2d.layout.locator.DraggableLocator());
-          }
-        });
-
       });
-      // console.log(document.querySelector("#canvasContainer svg"));
-      // match.add(new draw2d.shape.basic.Label({
-      //   text: element.mcId, 
-      //   x: 0, 
-      //   y: 0
-      // }), new draw2d.layout.locator.DraggableLocator());
     })
     .catch(er => console.log(er))
 
+    // // Get all Edges
+    // fetch("http://localhost:8080/edges")
+    // .then(response => response.json())
+    // .then(result => {
+    //   console.log(result);
+    // })
+    // .catch(er => console.log(er));
+
     canvasElement?.addEventListener('mouseup', () => {
       const currentNode = canvas.getPrimarySelection();
-      if(currentNode) {
+      
+      // Exception for moving Labels and Connections
+      if(currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
         // Handle moved Node
-        mcid_input.value = currentNode.id;
+        // console.log(currentNode);
+        
+        // Get name of node from Label
+        mcid_input.value = currentNode.children.data[0].figure.text;
+
         screenX_input.value = currentNode.x;
         screenY_input.value = currentNode.y;
 
@@ -82,7 +72,6 @@ export class CanvasComponent implements AfterViewInit {
         formData.append("id", currentNode.id);
         formData.append("screenX", currentNode.x);
         formData.append("screenY", currentNode.y);
-
 
         this.sendRequest("/nodes", "PUT", formData);
         
@@ -95,7 +84,7 @@ export class CanvasComponent implements AfterViewInit {
       e.preventDefault();
       // Example: Adding a square to the canvas
       const square = new draw2d.shape.basic.Rectangle({
-        id: mcid_input.value,
+        // id: mcid_input.value,
         width: 50,
         height: 50,
         x: 100,
@@ -103,25 +92,28 @@ export class CanvasComponent implements AfterViewInit {
         bgColor: '#00ee00',
       });
 
-      // ---------------- not currently working --------------------------
+
+      
       // Check if given minecraft ID already exists as a node
-      if(!canvas.getFigures().data.find((obj:any) => obj.id === square.id)) {
-        this.drawNode(canvas, square.id, square);
+      if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
+        this.drawNode(canvas, mcid_input.value, square);
         screenX_input.value = square.x;
         screenY_input.value = square.y;
       } else {
         // Handle duplicates
+        alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
         return;
       }
-      //-------------------------------------------------------------------
       
       const formData = new FormData(form);
       // Temporary Hardcode
       formData.append("canvasId", "-1");
-      
-      
-      // Send request with FormData
+      // -------------------
+
       this.sendRequest("/nodes", "POST", formData);
+
+      // This is a shit
+      location.reload();
     })
   }
 
@@ -155,33 +147,16 @@ export class CanvasComponent implements AfterViewInit {
       
       this.sendRequest("/edges", "POST", formData)
     })
-    shape.id = mcid;
+
+    // shape.id = mcid;
+
+    shape.add(new draw2d.shape.basic.Label({
+      text: mcid, 
+      x: 0, 
+      y: -25
+    }), new draw2d.layout.locator.DraggableLocator());
     
     canvas.add(shape);
-
-    // Apply Labels (könnt besser gehn)
-    // fetch("http://localhost:8080/nodes")
-    // .then(response => response.json())
-    // .then(res => {
-    //   console.log(res);
-
-      
-    //   // res.forEach((element:any) => {
-    //   //   let match = canvas.getFigures().data.find((obj:any) => obj.id === element.id);
-    //   //   if(match) {
-    //   //     match.add(new draw2d.shape.basic.Label({
-    //   //       text: element.mcId, 
-    //   //       x: 0, 
-    //   //       y: 0
-    //   //     }), new draw2d.layout.locator.DraggableLocator());
-    //   //   }
-
-    //   // });
-    // })
-    // .catch(er => console.log(er));
-
-
-    // console.log(canvas.getFigures());
     
     return true;
   }
@@ -195,6 +170,7 @@ export class CanvasComponent implements AfterViewInit {
     .then(result => {
       // Handle response
       console.log(result);
+      
     })
     .catch(er => {
       console.log(er);
