@@ -26,7 +26,7 @@ export class CanvasComponent implements AfterViewInit {
     const screenX_input = <HTMLInputElement>document.querySelector('#screenX-input');
     const screenY_input = <HTMLInputElement>document.querySelector('#screenY-input');
 
-    const delete_button    = <HTMLButtonElement>document.querySelector('#delete-button');
+    const delete_button = <HTMLButtonElement>document.querySelector('#delete-button');
 
 
     //-------- Placeholder Texture ---
@@ -58,24 +58,34 @@ export class CanvasComponent implements AfterViewInit {
       })
       .catch(er => console.log(er));
 
-    // // Get all Edges
-    // fetch("http://localhost:8080/edges")
-    // .then(response => response.json())
-    // .then(result => {
-    //   console.log(result);
-    // })
-    // .catch(er => console.log(er));
+    // Get all Edges
+    fetch("http://localhost:8080/edges/-1")
+    .then(response => response.json())
+    .then(result => {
+      console.log(result);
+
+      result.forEach((connection :any) => {
+        const con = new draw2d.Connection();
+        con.id = connection.id;
+        con.setSource(connection.from.getOutputPort(0));
+        con.setSource(connection.to.getInputPort(0));
+        canvas.add(con);
+      });
+    })
+    .catch(er => console.log(er));
 
     canvasElement?.addEventListener('mouseup', () => {
       const currentNode = canvas.getPrimarySelection();
+      // Handle moved Node
+      console.log(currentNode);
+
+      if(currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label") {
+        // Enable deleteButton
+        delete_button.disabled = false;
+      }
 
       // Exception for moving Labels and Connections
       if(currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
-        // Enable deleteButton
-        delete_button.disabled = false;
-
-        // Handle moved Node
-        // console.log(currentNode);
 
         // Get name of node from Label
         mcid_input.value = currentNode.children.data[0].figure.text;
@@ -89,31 +99,42 @@ export class CanvasComponent implements AfterViewInit {
         formData.append("screenY", currentNode.y);
 
         this.sendRequest("/nodes", "PUT", formData);
-
       } else {
         return;
       }
     });
 
     delete_button?.addEventListener('click', () => {
+      const selectedNode = canvas.getPrimarySelection();
+      let endpoint :string;
 
-      this.deleteNode(form, delete_button, canvas, canvas.getPrimarySelection(), "/nodes");
+      if(selectedNode.cssClass === "draw2d_Connection") {
+        endpoint = "/edges";
+      } else {
+        endpoint = "/nodes";
+      }
+
+      this.deleteNode(form, delete_button, canvas, selectedNode, endpoint);
     })
 
     form.addEventListener('submit', e => {
       e.preventDefault();
       // Example: Adding a square to the canvas
-      const square = new draw2d.shape.basic.Rectangle({
+      const shape = new draw2d.shape.basic.Image({
         // id: mcid_input.value,
         width: 50,
         height: 50,
         x: 100,
         y: 100,
-        bgColor: '#00ee00',
+        path: placeholderPath,
+        cssClass: 'pixelated',
       });
 
 
 
+      // Fill form inputs before constructing new FormData to make sure that no error is in result
+      screenX_input.value = shape.x;
+      screenY_input.value = shape.y;
 
       const formData = new FormData(form);
       // Temporary Hardcode
@@ -126,11 +147,12 @@ export class CanvasComponent implements AfterViewInit {
       })
       .then(response => response.json())
       .then(result => {
+        console.log(result);
+        
         // Check if given minecraft ID already exists as a node
         if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
-          this.drawNode(canvas, mcid_input.value, square, result.id);
-          screenX_input.value = square.x;
-          screenY_input.value = square.y;
+          // figure.cssClass = "pixelated";
+          this.drawNode(canvas, mcid_input.value, shape, result.id);
         } else {
           // Handle duplicates
           alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
@@ -145,17 +167,19 @@ export class CanvasComponent implements AfterViewInit {
     })
   }
 
-  drawNode(canvas: any, mcid: any, shape: any, shapeId: any = null): Boolean {
+  drawNode(canvas: any, mcId: any, shape: any, shapeId: any = null): Boolean {
     // Ports to shape (simple)
     const inputPort = shape.createPort("input");
     const outputPort = shape.createPort("output");
 
     inputPort.on("connect", (emitterPort: any, connection: any) => {
       connection.connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
+
       let label = new draw2d.shape.basic.Label({
         text: 0,
       });
       label.installEditor(new draw2d.ui.LabelEditor());
+
       connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
 
       const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
@@ -167,7 +191,19 @@ export class CanvasComponent implements AfterViewInit {
       formData.append("amount", "1"); // Temporary hardcoded value
       formData.append("canvasId", "-1");
 
-      this.sendRequest("/edges", "POST", formData);
+      fetch(`http://localhost:8080/edges`, {
+        method: "POST",
+        body: formData,
+      })
+      .then(response => response.json())
+      .then(result => {
+        // Handle response
+        connection.connection.id = result.id;
+      })
+      .catch(er => {
+        console.log(er);
+      })
+      // this.sendRequest("/edges", "POST", formData);
     });
 
     if (shapeId) {
@@ -175,24 +211,12 @@ export class CanvasComponent implements AfterViewInit {
     }
 
     shape.add(new draw2d.shape.basic.Label({
-      text: mcid,
+      text: mcId,
       x: 0,
       y: -25
     }), new draw2d.layout.locator.DraggableLocator());
 
     canvas.add(shape);
-
-    // Access the <image> element inside the <svg> and apply styles
-    setTimeout(() => {
-      const svgElement = shape.canvas.paper.getById(shape.id)?.node;
-      if (svgElement) {
-        // Select the <image> element inside the <svg>
-        const imageElement = svgElement.querySelector("image");
-        if (imageElement) {
-          imageElement.classList.add("pixelated");
-        }
-      }
-    }, 50); // Adjust delay if needed to ensure the element is in the DOM
 
     return true;
   }
