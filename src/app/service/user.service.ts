@@ -26,7 +26,15 @@ export class UserService {
   login(user: User): Observable<User> {
     user.passwordHash = CryptoJS.SHA256(user.passwordHash.toString()).toString(CryptoJS.enc.Hex);
     return this.http.post<User>(baseUri + '/login',
-      user)
+      user);
   }
 
+  reload(sessionId :string, userId :number): Observable<User> {
+    const payload = {
+      sessionId: sessionId,
+      id: userId
+    };
+    return this.http.post<User>(baseUri + '/reload',
+      payload);
+  }
 }

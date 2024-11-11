@@ -15,7 +15,8 @@ const routes: Routes = [
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
     ]},
   {path: 'canvas', children: [
-      {path: '', component: CanvasComponent},
+      {path: ':id', component: CanvasComponent},
+
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
     ]},
   {path: 'user', children: [
