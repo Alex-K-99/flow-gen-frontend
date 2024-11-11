@@ -1,0 +1,39 @@
+<h1>Welcome to FlowGen</h1>
+
+<div class="card">
+  <div *ngIf="!loggedIn()">
+    <h4 class="card-header">You are not logged in!</h4>
+    <h5 class="card-body"> Sign in or create an account</h5>
+    <div class="card-body">
+        <div>
+          <button [routerLink]="'register'" style="margin-right: 10px " class="btn btn-primary">
+            Register
+          </button>
+          <button [routerLink]="'login'" class="btn btn-primary">
+            Login
+          </button>
+        </div>
+    </div>
+  </div>
+  <div *ngIf="loggedIn()"></div>
+  <h4 class="card-header">Hello {{getUserName()}}</h4>
+  <div class="mt-3">
+    <table>
+      <thead>
+        <th>Canvas</th>
+        <th>Actions</th>
+      </thead>
+      <tbody>
+        <td></td>
+      </tbody>
+    </table>
+    <div>
+      <button [routerLink]="'register'" style="margin-right: 10px " class="btn btn-primary">
+        Register
+      </button>
+      <button [routerLink]="'login'" class="btn btn-primary">
+        Login
+      </button>
+    </div>
+  </div>
+</div>

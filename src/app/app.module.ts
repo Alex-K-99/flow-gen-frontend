@@ -16,13 +16,12 @@ import {HorseComponent} from './component/horse/horse.component';
 import {PortalModule} from '@angular/cdk/portal';
 import {MatDialogModule} from "@angular/material/dialog";
 import {MatListModule} from "@angular/material/list";
+import {CookieService} from "ngx-cookie-service";
 
 @NgModule({
   declarations: [
     AppComponent,
     HeaderComponent,
-    HorseComponent,
-    HorseCreateEditComponent,
     AutocompleteComponent,
   ],
   bootstrap: [AppComponent],
@@ -35,7 +34,9 @@ import {MatListModule} from "@angular/material/list";
     // Needed for Toastr
     BrowserAnimationsModule,
     PortalModule, MatListModule], providers: [
-    provideHttpClient(withInterceptorsFromDi())]
+    provideHttpClient(withInterceptorsFromDi()),
+    [CookieService]
+  ]
 })
 export class AppModule {
 }

@@ -1,20 +1,15 @@
 import {NgModule} from '@angular/core';
 import {RouterModule, Routes} from '@angular/router';
-import {
-  HorseCreateEditComponent,
-  HorseCreateEditMode
-} from './component/horse/horse-create-edit/horse-create-edit.component';
-import {HorseComponent} from './component/horse/horse.component';
 import {NodeComponent} from "./component/node/node.component";
 import {CanvasComponent} from "./component/canvas/canvas.component";
+import {UserComponent} from "./component/user/user.component";
+import {RegisterComponent} from "./component/register/register.component";
+import {LoginComponent} from "./component/login/login.component";
+import {LandingpageComponent} from "./component/landingpage/landingpage.component";
 
 
 const routes: Routes = [
-  {path: '', redirectTo: 'nodes', pathMatch: 'full'},
-  {path: 'horses', children: [
-    {path: '', component: HorseComponent},
-    {path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
-  ]},
+  {path: '', component: LandingpageComponent},
   {path: 'nodes', children: [
       {path: '', component: NodeComponent},
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
@@ -23,7 +18,13 @@ const routes: Routes = [
       {path: '', component: CanvasComponent},
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
     ]},
-  {path: '**', redirectTo: 'recipes'},
+  {path: 'user', children: [
+      {path: '', component: UserComponent},
+
+    ]},
+  {path: 'register', component: RegisterComponent},
+  {path: 'login', component: LoginComponent},
+  {path: '**', redirectTo: 'users'},
 
 
 ];
