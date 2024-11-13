@@ -46,25 +46,27 @@ export class CanvasComponent implements AfterViewInit {
       fetch("http://localhost:8080/nodes/ofCanvas/" + canvasIdNum)
         .then(response => response.json())
         .then(result => {
-          result.forEach((node: any) => {
-            // Check if texture is available, otherwise use placeholder
-            const texturePath = node.texture
-              ? 'data:image/png;base64,' + node.texture
-              : placeholderPath;
+          if(result && result.length > 0) {
+            result.forEach((node: any) => {
+              // Check if texture is available, otherwise use placeholder
+              const texturePath = node.texture
+                ? 'data:image/png;base64,' + node.texture
+                : placeholderPath;
 
-            const shape = new draw2d.shape.basic.Image({
-              id: node.id,
-              width: 48,
-              height: 48,
-              x: node.screenX,
-              y: node.screenY,
-              path: texturePath,
-              resizeable: false,
-              cssClass: 'pixelated'
+              const shape = new draw2d.shape.basic.Image({
+                id: node.id,
+                width: 48,
+                height: 48,
+                x: node.screenX,
+                y: node.screenY,
+                path: texturePath,
+                resizeable: false,
+                cssClass: 'pixelated'
+              });
+
+              this.drawNode(canvas, node.mcId, shape);
             });
-
-            this.drawNode(canvas, node.mcId, shape);
-          });
+          }
         })
         .catch(er => console.log(er));
 
@@ -72,15 +74,17 @@ export class CanvasComponent implements AfterViewInit {
       fetch("http://localhost:8080/edges/ofCanvas/" + canvasIdNum)
         .then(response => response.json())
         .then(result => {
-          console.log(result);
+          if(result && result.length > 0) {
+            console.log(result);
 
-          result.forEach((connection: any) => {
-            const con = new draw2d.Connection();
-            con.id = connection.id;
-            con.setSource(connection.from.getOutputPort(0));
-            con.setSource(connection.to.getInputPort(0));
-            canvas.add(con);
-          });
+            result.forEach((connection: any) => {
+              const con = new draw2d.Connection();
+              con.id = connection.id;
+              con.setSource(connection.from.getOutputPort(0));
+              con.setSource(connection.to.getInputPort(0));
+              canvas.add(con);
+            });
+          }
         })
         .catch(er => console.log(er));
 
