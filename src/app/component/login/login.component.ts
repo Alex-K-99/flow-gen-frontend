@@ -1,23 +1,24 @@
-import { Component, OnInit } from '@angular/core';
-import {Router, ActivatedRoute, RouterLink} from '@angular/router';
-import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
-import { first } from 'rxjs/operators';
-
-import { UserService } from '../../service/user.service';
+import {Component, OnInit} from '@angular/core';
+import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
+import {ActivatedRoute, Router, RouterLink} from "@angular/router";
+import {UserService} from "../../service/user.service";
 import {AlertService} from "../../service/alert.service";
-import {NgClass} from "@angular/common";
 import {CookieService} from "ngx-cookie-service";
+import {first} from "rxjs/operators";
+import {NgClass} from "@angular/common";
 
 @Component({
+  selector: 'app-login',
   standalone: true,
   imports: [
     ReactiveFormsModule,
     NgClass,
     RouterLink
   ],
-  templateUrl: 'register.component.html'
+  templateUrl: './login.component.html',
+  styleUrl: './login.component.scss'
 })
-export class RegisterComponent implements OnInit {
+export class LoginComponent implements OnInit {
   form!: FormGroup;
   loading = false;
   submitted = false;
@@ -33,7 +34,6 @@ export class RegisterComponent implements OnInit {
 
   ngOnInit() {
     this.form = this.formBuilder.group({
-      email: ['', Validators.required],
       username: ['', Validators.required],
       passwordHash: ['', [Validators.required, Validators.minLength(6)]]
     });
@@ -54,15 +54,15 @@ export class RegisterComponent implements OnInit {
     }
 
     this.loading = true;
-    this.userService.register(this.form.value)
+    this.userService.login(this.form.value)
       .pipe(first())
       .subscribe({
         next: (data) => {
-          this.alertService.success('Registration successful', { keepAfterRouteChange: true });
+          this.alertService.success('Login successful', { keepAfterRouteChange: true });
           sessionStorage.setItem('sessionId', data.sessionId);
           sessionStorage.setItem('userId', data.id.toString());
           sessionStorage.setItem('userName', data.username.toString());
-          this.router.navigate([''], { relativeTo: this.route });
+          this.router.navigate(['..'], { relativeTo: this.route });
         },
         error: error => {
           this.alertService.error(error);

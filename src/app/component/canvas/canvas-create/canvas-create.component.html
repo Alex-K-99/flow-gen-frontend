@@ -1,0 +1,29 @@
+<!-- canvas-create.component.html -->
+<div class="canvas-create-container">
+  <h2>Create New Canvas</h2>
+  <form (ngSubmit)="onSubmit()" #canvasForm="ngForm">
+
+    <!-- Canvas Name Input -->
+    <mat-form-field appearance="fill">
+      <label>Canvas Name</label>
+      <input matInput type="text" name="canvasName" [(ngModel)]="canvasName" required />
+    </mat-form-field>
+
+    <!-- Modclass Input -->
+    <mat-form-field appearance="fill">
+      <label>Modclass</label>
+      <input matInput type="text" name="modclass" [(ngModel)]="modclass" required />
+    </mat-form-field>
+
+    <!-- Package Base Input -->
+    <mat-form-field appearance="fill">
+      <label>Package Base</label>
+      <input matInput type="text" name="packageBase" [(ngModel)]="packageBase" required />
+    </mat-form-field>
+
+    <!-- Submit Button -->
+    <button mat-raised-button color="primary" type="submit" [disabled]="!canvasForm.form.valid"
+      [routerLink]="''"
+    (click)="onSubmit()">Create Canvas</button>
+  </form>
+</div>

@@ -17,4 +17,9 @@ export class CanvasService {
     return this.httpClient.get<Canvas[]>(baseUri + '/byUser?userId=' + userId + '&sessionId=' + sessionId,
       )
   }
+
+  create(canvasData: { name: string; modClass: string; packageBase: string }, userId :number, sessionId :string) :Observable<Canvas> {
+    return this.httpClient.post<Canvas>(baseUri + '?userId=' + userId + '&sessionId=' + sessionId,
+      canvasData);
+  }
 }

@@ -1,12 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import {RouterLink} from "@angular/router";
-import {MatButton} from "@angular/material/button";
+import {MatButton, MatIconButton} from "@angular/material/button";
 import {FormsModule, ReactiveFormsModule} from "@angular/forms";
 import {NgForOf, NgIf} from "@angular/common";
 import {Canvas} from "../../dto/canvas";
 import {CanvasService} from "../../service/canvas.service";
 import {User} from "../../dto/user";
 import {UserService} from "../../service/user.service";
+import {MatIcon} from "@angular/material/icon";
 
 @Component({
   selector: 'app-landingpage',
@@ -17,7 +18,9 @@ import {UserService} from "../../service/user.service";
     FormsModule,
     ReactiveFormsModule,
     NgIf,
-    NgForOf
+    NgForOf,
+    MatIconButton,
+    MatIcon
   ],
   templateUrl: './landingpage.component.html',
   styleUrl: './landingpage.component.scss'

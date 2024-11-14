@@ -11,12 +11,19 @@ import {AppRoutingModule} from './app-routing.module';
 import {AppComponent} from './app.component';
 import {AutocompleteComponent} from './component/autocomplete/autocomplete.component';
 import {HeaderComponent} from './component/header/header.component';
-import {HorseCreateEditComponent} from './component/horse/horse-create-edit/horse-create-edit.component';
-import {HorseComponent} from './component/horse/horse.component';
 import {PortalModule} from '@angular/cdk/portal';
 import {MatDialogModule} from "@angular/material/dialog";
 import {MatListModule} from "@angular/material/list";
 import {CookieService} from "ngx-cookie-service";
+import {MatInputModule} from "@angular/material/input";
+
+// app.module.ts
+
+// Angular Material modules
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatIconModule } from '@angular/material/icon';
+import { MatButtonModule } from '@angular/material/button';
+
 
 @NgModule({
   declarations: [
@@ -30,6 +37,10 @@ import {CookieService} from "ngx-cookie-service";
     FormsModule,
     NgbModule,
     MatDialogModule,
+    MatInputModule,
+    MatFormFieldModule,
+    MatIconModule,
+    MatButtonModule,
     ToastrModule.forRoot(),
     // Needed for Toastr
     BrowserAnimationsModule,

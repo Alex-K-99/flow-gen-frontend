@@ -5,24 +5,18 @@
       <div class="mb-3">
         <label class="form-label">Username</label>
         <input type="text" formControlName="username" class="form-control" [ngClass]="{ 'is-invalid': submitted && f.username.errors }" />
-
       </div>
       <div class="mb-3">
         <label class="form-label">Password</label>
         <input type="password" formControlName="passwordHash" class="form-control" [ngClass]="{ 'is-invalid': submitted && f.passwordHash.errors }" />
-
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Email</label>
-        <input type="email" formControlName="email" class="form-control" [ngClass]="{ 'is-invalid': submitted && f.email.errors }" />
-
       </div>
       <div>
         <button [disabled]="loading" class="btn btn-primary">
-          Register
+          Login
         </button>
-        <a routerLink="../login" class="btn btn-link">Login instead</a>
+        <a routerLink="../register" class="btn btn-link">Register instead</a>
       </div>
     </form>
   </div>
 </div>
+

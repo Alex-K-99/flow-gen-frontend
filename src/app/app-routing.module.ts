@@ -6,6 +6,7 @@ import {UserComponent} from "./component/user/user.component";
 import {RegisterComponent} from "./component/register/register.component";
 import {LoginComponent} from "./component/login/login.component";
 import {LandingpageComponent} from "./component/landingpage/landingpage.component";
+import {CanvasCreateComponent} from "./component/canvas/canvas-create/canvas-create.component";
 
 
 const routes: Routes = [
@@ -15,7 +16,9 @@ const routes: Routes = [
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
     ]},
   {path: 'canvas', children: [
+      {path: 'create', component: CanvasCreateComponent},
       {path: ':id', component: CanvasComponent},
+
 
       //{path: 'create', component: HorseCreateEditComponent, data: {mode: HorseCreateEditMode.create}},
     ]},
