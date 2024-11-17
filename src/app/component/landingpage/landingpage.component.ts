@@ -92,7 +92,7 @@ export class LandingpageComponent {
         },
         error: err => {
           console.error(err);
-          this.sessionStorage.clear();
+          localStorage.clear();
         }
       }
     )
