@@ -6,8 +6,10 @@ import {NgForOf, NgIf} from "@angular/common";
 import {Canvas} from "../../dto/canvas";
 import {CanvasService} from "../../service/canvas.service";
 import {User} from "../../dto/user";
-import {UserService} from "../../service/user.service";
+import {AuthService} from "../../service/auth.service";
 import {MatIcon} from "@angular/material/icon";
+import {WelcomeComponent} from "../welcome/welcome.component";
+import {LoginComponent} from "../login/login.component";
 
 @Component({
   selector: 'app-landingpage',
@@ -20,7 +22,9 @@ import {MatIcon} from "@angular/material/icon";
     NgIf,
     NgForOf,
     MatIconButton,
-    MatIcon
+    MatIcon,
+    WelcomeComponent,
+    LoginComponent
   ],
   templateUrl: './landingpage.component.html',
   styleUrl: './landingpage.component.scss'
@@ -31,7 +35,7 @@ export class LandingpageComponent {
   private user = <User>{};
 
   constructor(private canvasService :CanvasService,
-              private userService: UserService) {
+              private userService: AuthService) {
   }
 
   ngOnInit(): void {
@@ -39,16 +43,16 @@ export class LandingpageComponent {
       id: Number(sessionStorage.getItem('userId')!),
       sessionId: sessionStorage.getItem('sessionId')!,
       username: sessionStorage.getItem('userName')!,
-      passwordHash: ''
+      password: ''
     };
     this.reloadUser();
     this.reloadCanvases();
   }
 
   loggedIn() {
-    const username = sessionStorage.getItem('userName');
-    console.log(username);
-    if(username != null) {
+    const authToken = localStorage.getItem('auth_token');
+    console.log(authToken);
+    if(authToken != null) {
       return true;
     }
     return false;
@@ -57,10 +61,11 @@ export class LandingpageComponent {
   protected readonly sessionStorage = sessionStorage;
 
   getUserName() {
-    return sessionStorage.getItem('userName');
+    return this.user.username;
   }
 
   private reloadCanvases() {
+    if(this.user.id && this.user.sessionId)
     this.canvasService.getCanvasesOfUser(this.user.id, this.user.sessionId).subscribe(
       {
         next: data => {
@@ -75,13 +80,12 @@ export class LandingpageComponent {
   }
 
   private reloadUser() {
-    const sessionId = sessionStorage.getItem('sessionId');
-    const id = sessionStorage.getItem('userId');
-    if(sessionId === null || id === null) {
+    const authToken = localStorage.getItem('auth_token');
+    if(authToken === null) {
       console.log("Not logged in, thus cant reload!")
       return;
     }
-    const user = this.userService.reload(sessionId, Number(id)).subscribe(
+    const user = this.userService.reload(authToken).subscribe(
       {
         next: data => {
           this.user = data;
@@ -93,5 +97,20 @@ export class LandingpageComponent {
         }
       }
     )
+  }
+
+
+  onLogin(input: any) {
+    console.log('Fired onLogin')
+    console.log(input);
+    this.userService.login(
+      {username: input.username, password: input.password}
+    );
+  }
+
+  onRegister(input: any) {
+    this.userService.register(
+      {username: input.username, email: input.email, password: input.password}
+    );
   }
 }

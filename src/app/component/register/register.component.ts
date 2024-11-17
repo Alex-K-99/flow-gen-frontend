@@ -3,7 +3,7 @@ import {Router, ActivatedRoute, RouterLink} from '@angular/router';
 import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from '@angular/forms';
 import { first } from 'rxjs/operators';
 
-import { UserService } from '../../service/user.service';
+import { AuthService } from '../../service/auth.service';
 import {AlertService} from "../../service/alert.service";
 import {NgClass} from "@angular/common";
 import {CookieService} from "ngx-cookie-service";
@@ -26,7 +26,7 @@ export class RegisterComponent implements OnInit {
     private formBuilder: FormBuilder,
     private route: ActivatedRoute,
     private router: Router,
-    private userService: UserService,
+    private userService: AuthService,
     private alertService: AlertService,
     private cookieService: CookieService,
   ) { }
@@ -54,12 +54,12 @@ export class RegisterComponent implements OnInit {
     }
 
     this.loading = true;
-    this.userService.register(this.form.value)
+    /*this.userService.register(this.form.value)
       .pipe(first())
       .subscribe({
         next: (data) => {
           this.alertService.success('Registration successful', { keepAfterRouteChange: true });
-          sessionStorage.setItem('sessionId', data.sessionId);
+          /*sessionStorage.setItem('sessionId', data.sessionId);
           sessionStorage.setItem('userId', data.id.toString());
           sessionStorage.setItem('userName', data.username.toString());
           this.router.navigate([''], { relativeTo: this.route });
@@ -69,5 +69,6 @@ export class RegisterComponent implements OnInit {
           this.loading = false;
         }
       });
+  */
   }
 }

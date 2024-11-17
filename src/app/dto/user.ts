@@ -1,9 +1,9 @@
 export interface User {
-  id: number;
+  id?: number;
   uuid?: string;
   email?: string;
-  passwordHash: string;
+  password: string;
   username: string;
-  sessionId: string;
+  sessionId?: string;
   sessionValidUntil?: Date;
 }

@@ -1,7 +1,7 @@
-import {Component, OnInit} from '@angular/core';
-import {FormBuilder, FormGroup, ReactiveFormsModule, Validators} from "@angular/forms";
+import {Component, EventEmitter, OnInit, Output} from '@angular/core';
+import {FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators} from "@angular/forms";
 import {ActivatedRoute, Router, RouterLink} from "@angular/router";
-import {UserService} from "../../service/user.service";
+import {AuthService} from "../../service/auth.service";
 import {AlertService} from "../../service/alert.service";
 import {CookieService} from "ngx-cookie-service";
 import {first} from "rxjs/operators";
@@ -13,61 +13,33 @@ import {NgClass} from "@angular/common";
   imports: [
     ReactiveFormsModule,
     NgClass,
-    RouterLink
+    RouterLink,
+    FormsModule
   ],
   templateUrl: './login.component.html',
   styleUrl: './login.component.scss'
 })
-export class LoginComponent implements OnInit {
-  form!: FormGroup;
-  loading = false;
-  submitted = false;
+export class LoginComponent {
+  @Output() onSubmitLoginEvent = new EventEmitter();
+  @Output() onSubmitRegisterEvent = new EventEmitter();
 
-  constructor(
-    private formBuilder: FormBuilder,
-    private route: ActivatedRoute,
-    private router: Router,
-    private userService: UserService,
-    private alertService: AlertService,
-    private cookieService: CookieService,
-  ) { }
+  username: string = "";
+  password: string = "";
+  active: string = "login";
+  email: string = "";
 
-  ngOnInit() {
-    this.form = this.formBuilder.group({
-      username: ['', Validators.required],
-      passwordHash: ['', [Validators.required, Validators.minLength(6)]]
-    });
+  onSubmitLogin(): void {
+    this.onSubmitLoginEvent.emit({"username" : this.username, "password" : this.password})
   }
 
-  // convenience getter for easy access to form fields
-  get f() { return this.form.controls; }
+  onLoginTab(): void {
+    this.active = "login"
+  }
+  onRegisterTab(): void {
+    this.active = "register"
+  }
 
-  onSubmit() {
-    this.submitted = true;
-
-    // reset alerts on submit
-    this.alertService.clear();
-
-    // stop here if form is invalid
-    if (this.form.invalid) {
-      return;
-    }
-
-    this.loading = true;
-    this.userService.login(this.form.value)
-      .pipe(first())
-      .subscribe({
-        next: (data) => {
-          this.alertService.success('Login successful', { keepAfterRouteChange: true });
-          sessionStorage.setItem('sessionId', data.sessionId);
-          sessionStorage.setItem('userId', data.id.toString());
-          sessionStorage.setItem('userName', data.username.toString());
-          this.router.navigate(['..'], { relativeTo: this.route });
-        },
-        error: error => {
-          this.alertService.error(error);
-          this.loading = false;
-        }
-      });
+  onSubmitRegister() {
+    this.onSubmitRegisterEvent.emit({"username":this.username, "email":this.email, "password":this.password})
   }
 }

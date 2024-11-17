@@ -1,20 +1,11 @@
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-<h1>Welcome to FlowGen</h1>
+
 
 <div class="card">
+  <app-welcome/>
   <div *ngIf="!loggedIn()">
-    <h4 class="card-header">You are not logged in!</h4>
-    <h5 class="card-body"> Sign in or create an account</h5>
-    <div class="card-body">
-        <div>
-          <button [routerLink]="'register'" style="margin-right: 10px " class="btn btn-primary">
-            Register
-          </button>
-          <button [routerLink]="'login'" class="btn btn-primary">
-            Login
-          </button>
-        </div>
-    </div>
+    <app-login (onSubmitLoginEvent)="onLogin($event)"
+               (onSubmitRegisterEvent)="onRegister($event)"/>
   </div>
   <div *ngIf="loggedIn()">
     <h4 class="card-header">Hello {{getUserName()}}
