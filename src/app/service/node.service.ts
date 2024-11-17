@@ -25,6 +25,11 @@ export class NodeService {
   }
 
 
+  getNodesOfCanvas(canvasId :number) :Observable<Node[]> {
+      return this.http.get<Node[]>(baseUri + '/ofCanvas/' + canvasId)
+  }
+
+
   /**
    * Create a new horse in the system.
    *

@@ -1,7 +1,8 @@
 import { Component, ElementRef, AfterViewInit, ViewChild, Input } from '@angular/core';
 import * as $ from 'jquery'; // Import jQuery with correct types
 import draw2d from 'draw2d';
-import {ActivatedRoute} from "@angular/router";  // Import draw2d without types, relying on custom declaration
+import {ActivatedRoute} from "@angular/router";
+import {NodeService} from "../../service/node.service";  // Import draw2d without types, relying on custom declaration
 
 @Component({
   selector: 'app-canvas',
@@ -15,6 +16,7 @@ export class CanvasComponent implements AfterViewInit {
 
   constructor(
     private route: ActivatedRoute,
+    private nodeService :NodeService
   ) {
   }
 
@@ -42,8 +44,30 @@ export class CanvasComponent implements AfterViewInit {
     const canvasId = this.route.snapshot.paramMap.get('id');
     if(canvasId) {
       const canvasIdNum = Number(canvasId);
+      this.nodeService.getNodesOfCanvas(Number(canvasId)).subscribe({
+        next :(nodes) => {
+          if(nodes && nodes.length > 0) {
+            nodes.forEach((node) => {
+              const texturePath = node.texture
+                ? 'data:image/png;base64,' + node.texture
+                : placeholderPath;
+              const shape = new draw2d.shape.basic.Image({
+                id: node.id,
+                width: 48,
+                height: 48,
+                x: node.screenX,
+                y: node.screenY,
+                path: texturePath,
+                resizeable: false,
+                cssClass: 'pixelated',
+              });
+              this.drawNode(canvas, node.mcId, shape);
+            })
 
-      fetch("http://localhost:8080/nodes/ofCanvas/" + canvasIdNum)
+          }
+        }
+      })
+      /*fetch("http://localhost:8080/nodes/ofCanvas/" + canvasIdNum)
         .then(response => response.json())
         .then(result => {
           if(result && result.length > 0) {
@@ -68,7 +92,7 @@ export class CanvasComponent implements AfterViewInit {
             });
           }
         })
-        .catch(er => console.log(er));
+        .catch(er => console.log(er));*/
 
       // Get all Edges
       fetch("http://localhost:8080/edges/ofCanvas/" + canvasIdNum)

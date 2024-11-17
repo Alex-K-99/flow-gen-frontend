@@ -18,6 +18,10 @@ export class CanvasService {
       )
   }
 
+  getCanvasById(id :number) :Observable<Canvas> {
+    return this.httpClient.get<Canvas>(baseUri +'/' + id)
+  }
+
   create(canvasData: { name: string; modClass: string; packageBase: string }, userId :number, sessionId :string) :Observable<Canvas> {
     return this.httpClient.post<Canvas>(baseUri + '?userId=' + userId + '&sessionId=' + sessionId,
       canvasData);
