@@ -2,7 +2,9 @@ import { Component, ElementRef, AfterViewInit, ViewChild, Input } from '@angular
 import * as $ from 'jquery'; // Import jQuery with correct types
 import draw2d from 'draw2d';
 import {ActivatedRoute} from "@angular/router";
-import {NodeService} from "../../service/node.service";  // Import draw2d without types, relying on custom declaration
+import {NodeService} from "../../service/node.service";
+import {EdgeService} from "../../service/edge.service";
+import {Edge} from "../../dto/edge";  // Import draw2d without types, relying on custom declaration
 
 @Component({
   selector: 'app-canvas',
@@ -16,7 +18,8 @@ export class CanvasComponent implements AfterViewInit {
 
   constructor(
     private route: ActivatedRoute,
-    private nodeService :NodeService
+    private nodeService :NodeService,
+    private edgeService :EdgeService,
   ) {
   }
 
@@ -95,7 +98,46 @@ export class CanvasComponent implements AfterViewInit {
         .catch(er => console.log(er));*/
 
       // Get all Edges
-      fetch("http://localhost:8080/edges/ofCanvas/" + canvasIdNum)
+      this.edgeService.getEdgesOfCanvas(canvasIdNum).subscribe({
+        next: (edges) => {
+          if (edges && edges.length > 0) {
+            console.log(edges);
+
+            edges.forEach((edge: Edge) => {
+              // Find the source and target nodes on the canvas by their IDs
+              const sourceNode = canvas.getFigure(edge.nodeFrom);
+              const targetNode = canvas.getFigure(edge.nodeTo);
+
+              if (sourceNode && targetNode) {
+                // Get the ports
+                const sourcePort = sourceNode.getOutputPort(0); // Adjust index or port name as needed
+                const targetPort = targetNode.getInputPort(0);
+
+                if (sourcePort && targetPort) {
+                  // Create and configure the connection
+                  const con = new draw2d.Connection();
+                  con.id = edge.id;
+                  con.setSource(sourcePort);
+                  con.setTarget(targetPort);
+                  canvas.add(con);
+                } else {
+                  console.warn(
+                    `Ports not found for nodes: ${edge.nodeFrom} -> ${edge.nodeTo}`
+                  );
+                }
+              } else {
+                console.warn(
+                  `Nodes not found on canvas: ${edge.nodeFrom} -> ${edge.nodeTo}`
+                );
+              }
+            });
+          }
+        },
+        error: (error) => {
+          console.error("Failed to load edges:", error);
+        }
+      });
+      /*fetch("http://localhost:8080/edges/ofCanvas/" + canvasIdNum)
         .then(response => response.json())
         .then(result => {
           if(result && result.length > 0) {
@@ -110,7 +152,7 @@ export class CanvasComponent implements AfterViewInit {
             });
           }
         })
-        .catch(er => console.log(er));
+        .catch(er => console.log(er));*/
 
       canvasElement?.addEventListener('mouseup', () => {
         const currentNode = canvas.getPrimarySelection();
