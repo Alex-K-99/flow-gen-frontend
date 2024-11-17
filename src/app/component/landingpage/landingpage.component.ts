@@ -65,8 +65,7 @@ export class LandingpageComponent {
   }
 
   private reloadCanvases() {
-    if(this.user.id && this.user.sessionId)
-    this.canvasService.getCanvasesOfUser(this.user.id, this.user.sessionId).subscribe(
+    this.canvasService.getCanvasesOfUser().subscribe(
       {
         next: data => {
           this.canvases = data;

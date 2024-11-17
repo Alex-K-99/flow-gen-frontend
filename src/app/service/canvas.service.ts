@@ -13,8 +13,8 @@ export class CanvasService {
   constructor(private httpClient :HttpClient) {
   }
 
-  getCanvasesOfUser(userId :number, sessionId :string) :Observable<Canvas[]> {
-    return this.httpClient.get<Canvas[]>(baseUri + '/byUser?userId=' + userId + '&sessionId=' + sessionId,
+  getCanvasesOfUser() :Observable<Canvas[]> {
+    return this.httpClient.get<Canvas[]>(baseUri,
       )
   }
 
