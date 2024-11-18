@@ -1,7 +1,7 @@
 import { Component } from '@angular/core';
 import {NodeService} from "../../service/node.service";
 import {ToastrService} from "ngx-toastr";
-import {Node} from "../../dto/node";
+import {NodeDto} from "../../dto/nodeDto";
 import {NgForOf} from "@angular/common";
 import {RouterLink} from "@angular/router";
 
@@ -16,7 +16,7 @@ import {RouterLink} from "@angular/router";
   styleUrl: './node.component.scss'
 })
 export class NodeComponent {
-  nodes: Node[] = [];
+  nodes: NodeDto[] = [];
   bannerError: string | null = null;
   constructor(
     private service: NodeService,
