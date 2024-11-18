@@ -38,11 +38,11 @@ export class CanvasComponent implements AfterViewInit {
     //-------- Placeholder Texture ---
     const placeholderPath = '/assets/resources/placeholder_texture.png';
 
-    // Get all Nodes
     const canvasId = this.route.snapshot.paramMap.get('id');
     if(canvasId) {
       const canvasIdNum = Number(canvasId);
-
+      
+      // Get all Nodes
       fetch("http://localhost:8080/nodes/ofCanvas/" + canvasIdNum)
         .then(response => response.json())
         .then(result => {
@@ -75,15 +75,18 @@ export class CanvasComponent implements AfterViewInit {
         .then(response => response.json())
         .then(result => {
           if(result && result.length > 0) {
-            console.log(result);
-
-            result.forEach((connection: any) => {
-              const con = new draw2d.Connection();
-              con.id = connection.id;
-              con.setSource(connection.from.getOutputPort(0));
-              con.setSource(connection.to.getInputPort(0));
-              canvas.add(con);
-            });
+            // Ekelhaft, muss besser gehn-------------------------------------------
+            setTimeout(() => {
+              result.forEach((connection: any) => {
+                const con = new draw2d.Connection();
+                con.id = connection.id;
+                
+                con.setSource(canvas.getFigure(Number(connection.nodeFrom)).getOutputPort(0));
+                con.setTarget(canvas.getFigure(Number(connection.nodeTo)).getInputPort(0));
+                canvas.add(con);
+              });
+            }, 10);
+            // ----------------------------------------------------------------------
           }
         })
         .catch(er => console.log(er));
@@ -229,6 +232,10 @@ export class CanvasComponent implements AfterViewInit {
       x: 0,
       y: -25
     }), new draw2d.layout.locator.DraggableLocator());
+
+    // Trying Selection Policy
+    
+    //------------------------
 
     canvas.add(shape);
 
