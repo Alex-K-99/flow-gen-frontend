@@ -119,11 +119,21 @@ export class CanvasComponent implements AfterViewInit {
       screenY_input.value = shape.y;
 
       const formData = new FormData(form);
-      // Temporary Hardcode
       formData.append("canvasId", canvasId);
       // -------------------
-
-      fetch(`http://localhost:8080/nodes`, {
+      this.nodeService.createFromForm(formData).subscribe({
+        next :data => {
+          if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
+            // figure.cssClass = "pixelated";
+            this.drawNode(canvas, mcid_input.value, shape, data.id);
+          } else {
+            // Handle duplicates
+            alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
+            return;
+          }
+        }
+      });
+      /*fetch(`http://localhost:8080/nodes`, {
         method: "POST",
         body: formData,
       })
@@ -145,7 +155,7 @@ export class CanvasComponent implements AfterViewInit {
       .catch(er => {
         console.log(er);
         return false;
-      })
+      })*/
     })
   }
   }
@@ -234,16 +244,17 @@ export class CanvasComponent implements AfterViewInit {
 
       connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
 
-      const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
-      const endNode = emitterPort.parent;
+      /*const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
+      const endNode = emitterPort.parent;*/
 
-      const formData = new FormData();
+      /*const formData = new FormData();
       formData.append("from", startNode.id);
       formData.append("to", endNode.id);
       formData.append("amount", "1"); // Temporary hardcoded value
-      formData.append("canvasId", "-1");
+      formData.append("canvasId", "-1");*/
 
-      fetch(`http://localhost:8080/edges`, {
+      //this.edgeService.create(formData).subscribe();
+      /*fetch(`http://localhost:8080/edges`, {
         method: "POST",
         body: formData,
       })
@@ -254,7 +265,7 @@ export class CanvasComponent implements AfterViewInit {
       })
       .catch(er => {
         console.log(er);
-      })
+      })*/
       // this.sendRequest("/edges", "POST", formData);
     });
 
@@ -269,7 +280,6 @@ export class CanvasComponent implements AfterViewInit {
     }), new draw2d.layout.locator.DraggableLocator());
 
     canvas.add(shape);
-
     return true;
   }
 
@@ -279,8 +289,12 @@ export class CanvasComponent implements AfterViewInit {
 
     const formData = new FormData();
     formData.append("id", node.id);
-
-    this.sendRequest(endpoint, "DELETE", formData);
+    if(endpoint === '/nodes') {
+      this.nodeService.delete(node.id).subscribe();
+    } else {
+      this.edgeService.delete(node.id).subscribe();
+    }
+    //this.sendRequest(endpoint, "DELETE", formData);
 
     // Clear form
     form.reset();

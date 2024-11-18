@@ -43,8 +43,22 @@ export class NodeService {
     );
   }
 
-  deleteNode(nodeId: string): Observable<any> {
-    return this.http.delete(baseUri + '/' + nodeId);
+  createFromForm(formData :FormData): Observable<NodeDto> {
+    return this.http.post<NodeDto>(
+      baseUri,
+      formData
+    );
+  }
+
+  delete(id: number): Observable<any> {
+    const formData = new FormData();
+    formData.append('id', id.toString());
+
+    const options = {
+      body: formData,
+    };
+
+    return this.http.request('DELETE', `${baseUri}`, options);
   }
 
   updateNode(node: NodeDto, file?: File): Observable<any> {
