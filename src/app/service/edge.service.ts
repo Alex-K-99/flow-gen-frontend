@@ -18,7 +18,7 @@ export class EdgeService {
     return this.httpClient.get<Edge[]>(baseUri + '/ofCanvas/' + canvasId)
   }
 
-  delete(id: number): Observable<any> {
+  deleteEdge(id: number): Observable<any> {
     const formData = new FormData();
     formData.append('id', id.toString());
 
@@ -29,7 +29,7 @@ export class EdgeService {
     return this.httpClient.request('DELETE', `${baseUri}`, options);
   }
 
-  create(formData: FormData) :Observable<Edge> {
-    return this.httpClient.post<Edge>(baseUri, formData);
+  postEdge(edge: Edge) :Observable<Edge> {
+    return this.httpClient.post<Edge>(baseUri, edge);
   }
 }
