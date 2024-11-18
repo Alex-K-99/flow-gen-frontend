@@ -6,6 +6,7 @@ import {EdgeService} from "../../service/edge.service";
 import {Edge} from "../../dto/edge";
 import draw2d from "draw2d";
 import {NodeDto} from "../../dto/nodeDto";
+import {CodeGenService} from "../../service/codeGen.service";
 
 @Component({
   selector: 'app-canvas',
@@ -23,6 +24,7 @@ export class CanvasComponent implements AfterViewInit {
     private route: ActivatedRoute,
     private nodeService :NodeService,
     private edgeService :EdgeService,
+    private codeGenService :CodeGenService,
   ) {
   }
 
@@ -325,5 +327,26 @@ export class CanvasComponent implements AfterViewInit {
     })
 
     return true;
+  }
+
+  generateSourcesX() {
+
+  }
+
+  generateSources(): void {
+    const canvasId = this.route.snapshot.paramMap.get('id');
+    this.codeGenService.getSourcesZip(Number(canvasId)).subscribe({
+      next: (zipFile: Blob) => {
+        const blobUrl = URL.createObjectURL(zipFile);
+        const link = document.createElement('a');
+        link.href = blobUrl;
+        link.download = `canvas_${canvasId}_sources.zip`; // Desired file name
+        link.click();
+        URL.revokeObjectURL(blobUrl); // Clean up the object URL
+      },
+      error: (err) => {
+        console.error('Failed to download ZIP file:', err);
+      },
+    });
   }
 }
