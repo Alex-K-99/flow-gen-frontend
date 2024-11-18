@@ -244,16 +244,17 @@ export class CanvasComponent implements AfterViewInit {
 
       connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
 
+      //TODO: fix this part so edges can be created again without doing so when loading a canvas
       /*const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
-      const endNode = emitterPort.parent;*/
+      const endNode = emitterPort.parent;
 
-      /*const formData = new FormData();
+      const formData = new FormData();
       formData.append("from", startNode.id);
       formData.append("to", endNode.id);
       formData.append("amount", "1"); // Temporary hardcoded value
-      formData.append("canvasId", "-1");*/
+      formData.append("canvasId", "-1");
 
-      //this.edgeService.create(formData).subscribe();
+      this.edgeService.create(formData).subscribe();*/
       /*fetch(`http://localhost:8080/edges`, {
         method: "POST",
         body: formData,
