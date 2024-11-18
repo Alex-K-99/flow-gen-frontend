@@ -7,6 +7,7 @@ import {MatLabel} from "@angular/material/form-field";
 import {MatInput} from "@angular/material/input";
 import {MatButton} from "@angular/material/button";
 import {RouterLink} from "@angular/router";
+import {Canvas} from "../../../dto/canvas";
 
 
 @Component({
@@ -30,19 +31,13 @@ export class CanvasCreateComponent {
   constructor(private canvasService: CanvasService) {}
 
   onSubmit(): void {
-    const canvasData = {
+    const canvas :Canvas = {
       name: this.canvasName,
       modClass: this.modclass,
       packageBase: this.packageBase
     };
 
-    const sessionId = sessionStorage.getItem('sessionId');
-    const id = sessionStorage.getItem('userId');
-    if(sessionId == null || id == null) {
-      return;
-    }
-
-    this.canvasService.create(canvasData, Number(id), sessionId).subscribe({
+    this.canvasService.create(canvas).subscribe({
       next: (response) => {
         console.log('Canvas created successfully:', response);
         // Optionally reset form or navigate away
