@@ -1,5 +1,4 @@
 import { Component, ElementRef, AfterViewInit, ViewChild, Input } from '@angular/core';
-import * as $ from 'jquery'; // Import jQuery with correct types
 import {ActivatedRoute} from "@angular/router";
 import {NodeService} from "../../service/node.service";
 import {EdgeService} from "../../service/edge.service";
@@ -7,6 +6,9 @@ import {Edge} from "../../dto/edge";
 import draw2d from "draw2d";
 import {NodeDto} from "../../dto/nodeDto";
 import {CodeGenService} from "../../service/codeGen.service";
+import {AuthService} from "../../service/auth.service";
+import {WebsocketService} from "../../service/websocket.service";
+import {fromEvent, throttleTime} from "rxjs";
 
 @Component({
   selector: 'app-canvas',
@@ -25,141 +27,161 @@ export class CanvasComponent implements AfterViewInit {
     private nodeService :NodeService,
     private edgeService :EdgeService,
     private codeGenService :CodeGenService,
+    private websocketService :WebsocketService,
+    private authService :AuthService,
   ) {
   }
 
+  private cursorPosition = { x: 0, y: 0 };
+  private isMouseOverCanvas = false;
+  private intervalId: any = null; // To store the interval ID
+
   ngAfterViewInit(): void {
     //------ Canvas Setup ------------
-    const canvasElement = document.querySelector('#canvasContainer');
+    const canvasElement = document.querySelector('#canvasContainer') as HTMLElement;
     // Initialize the draw2d Canvas with the ID of a valid HTML element
     const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : null;
     //--------------------------------
 
 
+
+
     //------- Form Setup -------------
-    const form          = <HTMLFormElement>document.querySelector('#node-form');
-    const mcid_input    = <HTMLInputElement>document.querySelector('#mcid-input');
+    const form = <HTMLFormElement>document.querySelector('#node-form');
+    const mcid_input = <HTMLInputElement>document.querySelector('#mcid-input');
     const screenX_input = <HTMLInputElement>document.querySelector('#screenX-input');
     const screenY_input = <HTMLInputElement>document.querySelector('#screenY-input');
 
     const delete_button = <HTMLButtonElement>document.querySelector('#delete-button');
 
 
+
     // Get all Nodes
     const canvasId = this.route.snapshot.paramMap.get('id');
-    if(canvasId) {
+    if (canvasId) {
       const canvasIdNum = Number(canvasId);
-
-      this.getAndRenderNodes(canvasId, this.placeholderPath, canvas);
-      this.getAndRenderEdges(canvasIdNum, canvas);
-
-      canvasElement?.addEventListener('mouseup', () => {
-        const currentNode = canvas.getPrimarySelection();
-        // Handle moved Node
-        console.log(currentNode);
-
-        if (currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label") {
-          // Enable deleteButton
-          delete_button.disabled = false;
+      const authToken = this.authService.getAuthToken();
+      if (authToken) {
+        if(canvasElement) {
+          fromEvent<MouseEvent>(canvasElement, 'mousemove')
+            .pipe(throttleTime(250))
+            .subscribe((event :MouseEvent) => {
+              this.handleMouseMoveEvent(event, canvasElement);
+            });
         }
 
-        // Exception for moving Labels and Connections
-        if (currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
+        this.getAndRenderNodes(canvasId, this.placeholderPath, canvas);
+        this.getAndRenderEdges(canvasIdNum, canvas);
+        this.websocketService.connect('http://localhost:8080/canvasUpdatesBroadcast', authToken)
 
-          // Get name of node from Label
-          mcid_input.value = currentNode.children.data[0].figure.text;
 
-          screenX_input.value = currentNode.x;
-          screenY_input.value = currentNode.y;
+        canvasElement?.addEventListener('mouseup', () => {
+          const currentNode = canvas.getPrimarySelection();
+          // Handle moved Node
+          console.log(currentNode);
 
-          const texture = null;
-          const editedNode :NodeDto = new class implements NodeDto {
-            id: number = currentNode.id;
-            mcId: string = mcid_input.value;
-            pattern: null = null;
-            screenX: number = currentNode.x;
-            screenY: number = currentNode.y;
-            texture: string | null = texture;
+          if (currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label") {
+            // Enable deleteButton
+            delete_button.disabled = false;
           }
 
-          this.nodeService.updateNode(editedNode).subscribe();
-        } else {
-          return;
-        }
-      });
+          // Exception for moving Labels and Connections
+          if (currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
 
-    delete_button?.addEventListener('click', () => {
-      const selectedNode = canvas.getPrimarySelection();
-      let endpoint :string;
+            // Get name of node from Label
+            mcid_input.value = currentNode.children.data[0].figure.text;
 
-      if(selectedNode.cssClass === "draw2d_Connection") {
-        endpoint = "/edges";
-      } else {
-        endpoint = "/nodes";
-      }
+            screenX_input.value = currentNode.x;
+            screenY_input.value = currentNode.y;
 
-      this.deleteNode(form, delete_button, canvas, selectedNode, endpoint);
-    })
+            const texture = null;
+            const editedNode: NodeDto = new class implements NodeDto {
+              id: number = currentNode.id;
+              mcId: string = mcid_input.value;
+              pattern: null = null;
+              screenX: number = currentNode.x;
+              screenY: number = currentNode.y;
+              texture: string | null = texture;
+            }
 
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      // Example: Adding a square to the canvas
-      const shape = new draw2d.shape.basic.Image({
-        // id: mcid_input.value,
-        width: 50,
-        height: 50,
-        x: 100,
-        y: 100,
-        path: this.placeholderPath,
-        cssClass: 'pixelated',
-      });
-
-
-
-      // Fill form inputs before constructing new FormData to make sure that no error is in result
-      screenX_input.value = shape.x;
-      screenY_input.value = shape.y;
-
-      const formData = new FormData(form);
-      formData.append("canvasId", canvasId);
-      // -------------------
-      this.nodeService.createFromForm(formData).subscribe({
-        next :data => {
-          if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
-            // figure.cssClass = "pixelated";
-            this.drawNode(canvas, mcid_input.value, shape, data.id);
+            this.nodeService.updateNode(editedNode).subscribe();
           } else {
-            // Handle duplicates
-            alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
             return;
           }
-        }
-      });
-      /*fetch(`http://localhost:8080/nodes`, {
-        method: "POST",
-        body: formData,
-      })
-      .then(response => response.json())
-      .then(result => {
-        console.log(result);
+        });
 
-        // Check if given minecraft ID already exists as a node
-        if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
-          // figure.cssClass = "pixelated";
-          this.drawNode(canvas, mcid_input.value, shape, result.id);
-        } else {
-          // Handle duplicates
-          alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
-          return;
-        }
+        delete_button?.addEventListener('click', () => {
+          const selectedNode = canvas.getPrimarySelection();
+          let endpoint: string;
 
-      })
-      .catch(er => {
-        console.log(er);
-        return false;
-      })*/
-    })
-  }
+          if (selectedNode.cssClass === "draw2d_Connection") {
+            endpoint = "/edges";
+          } else {
+            endpoint = "/nodes";
+          }
+
+          this.deleteNode(form, delete_button, canvas, selectedNode, endpoint);
+        })
+
+        form.addEventListener('submit', e => {
+          e.preventDefault();
+          // Example: Adding a square to the canvas
+          const shape = new draw2d.shape.basic.Image({
+            // id: mcid_input.value,
+            width: 50,
+            height: 50,
+            x: 100,
+            y: 100,
+            path: this.placeholderPath,
+            cssClass: 'pixelated',
+          });
+
+
+          // Fill form inputs before constructing new FormData to make sure that no error is in result
+          screenX_input.value = shape.x;
+          screenY_input.value = shape.y;
+
+          const formData = new FormData(form);
+          formData.append("canvasId", canvasId);
+          // -------------------
+          this.nodeService.createFromForm(formData).subscribe({
+            next: data => {
+              if (!canvas.getFigures().data.find((obj: any) => obj.children.data[0].figure.text === mcid_input.value)) {
+                // figure.cssClass = "pixelated";
+                this.drawNode(canvas, mcid_input.value, shape, data.id);
+              } else {
+                // Handle duplicates
+                alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
+                return;
+              }
+            }
+          });
+          /*fetch(`http://localhost:8080/nodes`, {
+            method: "POST",
+            body: formData,
+          })
+          .then(response => response.json())
+          .then(result => {
+            console.log(result);
+
+            // Check if given minecraft ID already exists as a node
+            if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
+              // figure.cssClass = "pixelated";
+              this.drawNode(canvas, mcid_input.value, shape, result.id);
+            } else {
+              // Handle duplicates
+              alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
+              return;
+            }
+
+          })
+          .catch(er => {
+            console.log(er);
+            return false;
+          })*/
+        })
+      }
+    }
   }
 
   private getAndRenderEdges(canvasIdNum: number, canvas: any | null) {
@@ -337,8 +359,21 @@ export class CanvasComponent implements AfterViewInit {
     return true;
   }
 
-  generateSourcesX() {
+  getCanvasDocumentCoordinates(canvas :HTMLElement): { y: number; x: number; width: number; height: number } | null {
+    if (canvas) {
+      const rect = canvas.getBoundingClientRect();
+      const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+      const scrollLeft = window.pageXOffset || document.documentElement.scrollLeft;
 
+      return {
+        y: Math.round(rect.top + scrollTop),  // Top coordinate relative to the document
+        x: Math.round(rect.left + scrollLeft), // Left coordinate relative to the document
+        width: Math.round(rect.width),          // Width of the canvas
+        height: Math.round(rect.height),        // Height of the canvas
+      };
+    }
+
+    return null; // Handle cases where the canvas element might not yet exist
   }
 
   generateSources(): void {
@@ -356,5 +391,13 @@ export class CanvasComponent implements AfterViewInit {
         console.error('Failed to download ZIP file:', err);
       },
     });
+  }
+
+  private handleMouseMoveEvent(event :MouseEvent,canvasElement :HTMLElement) {
+    let canPos = this.getCanvasDocumentCoordinates(canvasElement);
+    if(canPos) {
+      this.websocketService.sendCursorUpdate(event.x - canPos.x, event.y - canPos.y)
+    }
+
   }
 }

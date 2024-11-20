@@ -10,6 +10,7 @@ import {AuthService} from "../../service/auth.service";
 import {MatIcon} from "@angular/material/icon";
 import {WelcomeComponent} from "../welcome/welcome.component";
 import {LoginComponent} from "../login/login.component";
+import {WebsocketService} from "../../service/websocket.service";
 
 @Component({
   selector: 'app-landingpage',
@@ -35,16 +36,13 @@ export class LandingpageComponent {
   private user = <User>{};
 
   constructor(private canvasService :CanvasService,
-              private userService: AuthService) {
+              private userService: AuthService,
+              private webSocketService: WebsocketService,
+              private authService :AuthService,
+              ) {
   }
 
   ngOnInit(): void {
-    this.user = {
-      id: Number(sessionStorage.getItem('userId')!),
-      sessionId: sessionStorage.getItem('sessionId')!,
-      username: sessionStorage.getItem('userName')!,
-      password: ''
-    };
     this.reloadUser();
     this.reloadCanvases();
   }
@@ -111,5 +109,15 @@ export class LandingpageComponent {
     this.userService.register(
       {username: input.username, email: input.email, password: input.password}
     );
+  }
+
+  onWebSocketTest() {
+    const authToken = this.authService.getAuthToken();
+    if(authToken) {
+      this.webSocketService.connect('http://localhost:8080/canvasUpdatesBroadcast', authToken);
+    } else {
+      console.error("Cannot connect to websocket because not logged in!")
+    }
+
   }
 }
