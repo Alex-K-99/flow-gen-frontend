@@ -8,7 +8,8 @@ import {NodeDto} from "../../dto/nodeDto";
 import {CodeGenService} from "../../service/codeGen.service";
 import {AuthService} from "../../service/auth.service";
 import {WebsocketService} from "../../service/websocket.service";
-import {fromEvent, throttleTime} from "rxjs";
+import {fromEvent, throttleTime, Subscription} from "rxjs";
+import { UserUpdateType } from 'src/app/dto/userUpdateType';
 
 @Component({
   selector: 'app-canvas',
@@ -35,6 +36,53 @@ export class CanvasComponent implements AfterViewInit {
   private cursorPosition = { x: 0, y: 0 };
   private isMouseOverCanvas = false;
   private intervalId: any = null; // To store the interval ID
+  private subscriptions: Subscription = new Subscription();
+
+    ngOnDestroy(): void {
+      // Clean up subscriptions and disconnect WebSocket
+      this.subscriptions.unsubscribe();
+      this.websocketService.disconnect();
+    }
+
+  ngOnInit() :void {
+    const authToken = this.authService.getAuthToken();
+    if(authToken)
+      this.websocketService.connect('http://localhost:8080/canvasUpdatesBroadcast', authToken);
+
+    const canvasId = this.route.snapshot.paramMap.get('id');
+        if (canvasId) {
+    //Subscribe to UpdateCursors event
+
+       this.subscriptions.add(
+          this.websocketService.authConfirmed$.subscribe(() => {
+            //console.log('Authenticated successfully. Sending current canvas ID:', canvasId);
+            this.websocketService.sendCanvasIdUpdate(canvasId);
+          })
+        );
+        this.subscriptions.add(
+          this.websocketService.updateCursors$.subscribe((data) => {
+            console.log('Cursor positions updated:', data.cursors);
+          })
+        );
+
+        // Subscribe to UpdateNode event
+        this.subscriptions.add(
+          this.websocketService.updateNode$.subscribe((data) => {
+            console.log('Node data updated:', data.nodeData);
+          })
+        );
+
+        this.subscriptions.add(
+          this.websocketService.updateUsers$.subscribe(({ type, username }) => {
+            if (type === UserUpdateType.JOIN) {
+              console.log(`${username} has joined.`);
+            } else if (type === UserUpdateType.LEAVE) {
+              console.log(`${username} has left.`);
+            }
+          })
+        );
+      }
+  }
 
   ngAfterViewInit(): void {
     //------ Canvas Setup ------------
@@ -72,7 +120,6 @@ export class CanvasComponent implements AfterViewInit {
 
         this.getAndRenderNodes(canvasId, this.placeholderPath, canvas);
         this.getAndRenderEdges(canvasIdNum, canvas);
-        this.websocketService.connect('http://localhost:8080/canvasUpdatesBroadcast', authToken)
 
 
         canvasElement?.addEventListener('mouseup', () => {
