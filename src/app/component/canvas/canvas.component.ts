@@ -236,7 +236,7 @@ export class CanvasComponent implements AfterViewInit {
     this.edgeService.getEdgesOfCanvas(canvasIdNum).subscribe({
       next: (edges) => {
         if (edges && edges.length > 0) {
-          console.log(edges);
+          // console.log(edges);
 
           edges.forEach((edge: Edge) => {
             // Find the source and target nodes on the canvas by their IDs
@@ -305,49 +305,56 @@ export class CanvasComponent implements AfterViewInit {
     const inputPort = shape.createPort("input");
     const outputPort = shape.createPort("output");
 
-    inputPort.on("connect", (emitterPort: any, connection: any) => {
-      connection.connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
-
-      let label = new draw2d.shape.basic.Label({
-        text: 0,
-      });
-      label.installEditor(new draw2d.ui.LabelEditor());
-
-      connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
-
-      //TODO: fix this part so edges can be created again without doing so when loading a canvas
-      const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
-      const endNode = emitterPort.parent;
-
-      /*const formData = new FormData();
-      formData.append("from", startNode.id);
-      formData.append("to", endNode.id);
-      formData.append("amount", "1"); // Temporary hardcoded value
-      formData.append("canvasId", "-1");*/
-      const canvasId = this.route.snapshot.paramMap.get('id');
-      const edge :Edge = {
-        id: 0,
-        nodeFrom: endNode.id,
-        nodeTo: startNode.id,
-        amount: 1,
-        canvasId: Number(canvasId),
-      }
-
-      this.edgeService.postEdge(edge).subscribe();
-      /*fetch(`http://localhost:8080/edges`, {
-        method: "POST",
-        body: formData,
-      })
-      .then(response => response.json())
-      .then(result => {
-        // Handle response
-        connection.connection.id = result.id;
-      })
-      .catch(er => {
-        console.log(er);
-      })*/
-      // this.sendRequest("/edges", "POST", formData);
-    });
+    /* 
+    Slightly delay when the ports get der eventListeners/eventHandlers to prevent the Event from triggering Requests on initial load
+    This obviously is a bad and temporary solution so please burn me at the stake
+    */
+    setTimeout(() => {
+      inputPort.on("connect", (emitterPort: any, connection: any) => {
+        connection.connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
+        
+        let label = new draw2d.shape.basic.Label({
+          text: 0,
+        });
+        label.installEditor(new draw2d.ui.LabelEditor());
+        
+        connection.connection.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
+        
+        //TODO: fix this part so edges can be created again without doing so when loading a canvas
+        const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
+        const endNode = emitterPort.parent;
+        
+        /*const formData = new FormData();
+        formData.append("from", startNode.id);
+        formData.append("to", endNode.id);
+        formData.append("amount", "1"); // Temporary hardcoded value
+        formData.append("canvasId", "-1");*/
+        const canvasId = this.route.snapshot.paramMap.get('id');
+        const edge :Edge = {
+          id: 0,
+          nodeFrom: endNode.id,
+          nodeTo: startNode.id,
+          amount: 1,
+          canvasId: Number(canvasId),
+        }
+        
+        this.edgeService.postEdge(edge).subscribe();
+        /*fetch(`http://localhost:8080/edges`, {
+          method: "POST",
+          body: formData,
+          })
+          .then(response => response.json())
+          .then(result => {
+            // Handle response
+            connection.connection.id = result.id;
+            })
+            .catch(er => {
+              console.log(er);
+              })*/
+             // this.sendRequest("/edges", "POST", formData);
+        });
+      }, 500);
+    //----------------------------------------------------------------------------------------------------
 
     if (shapeId) {
       shape.id = shapeId;
