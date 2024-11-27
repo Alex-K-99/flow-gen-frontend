@@ -40,7 +40,7 @@ export class WebsocketService {
         // Handle canvas change confirmation
       } else if (message.startsWith('UC')) {
         // Handle UpdateCursors event
-        const cursors = this.parseCursorData(message.substring(2));
+        const cursors = this.parseCursorData(message.substring(3));
         this.updateCursorsSubject.next(cursors);
       } else if (message.startsWith('UN')) {
         // Handle UpdateNode event

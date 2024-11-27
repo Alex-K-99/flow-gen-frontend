@@ -80,6 +80,7 @@ export class CanvasComponent implements AfterViewInit {
             if (type === UserUpdateType.JOIN) {
               console.log(`${username} has joined.`);
             } else if (type === UserUpdateType.LEAVE) {
+              this.removeActiveCursor(username);
               console.log(`${username} has left.`);
             }
           })
@@ -505,4 +506,13 @@ export class CanvasComponent implements AfterViewInit {
     // Optionally, log the updated state for debugging
     console.log('Updated active cursors:', this.activeCursors);
   }
+
+  private removeActiveCursor(username: string): void {
+    // Filter out the cursor with the matching username
+    this.activeCursors = this.activeCursors.filter(cursor => cursor.name !== username);
+  
+    // Optionally log the updated state for debugging
+    console.log('Updated active cursors after removal:', this.activeCursors);
+  }
+  
 }
