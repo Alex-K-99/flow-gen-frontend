@@ -1,6 +1,7 @@
-import {Injectable} from "@angular/core";
+import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
-import { UserUpdateType } from "../dto/userUpdateType";
+import { UserUpdateType } from '../dto/userUpdateType';
+import { Cursor } from '../dto/cursor';
 
 @Injectable({
   providedIn: 'root',
@@ -9,9 +10,9 @@ export class WebsocketService {
   private websocket!: WebSocket;
   private readonly websocketEndpoint = 'http://localhost:8080/canvasUpdatesBroadcast'; // WebSocket URL
 
-  private updateCursorsSubject = new Subject<{cursors: Array<{x :number, y: number, username :string}>}> ();
+  private updateCursorsSubject = new Subject<Cursor[]>();
   private updateNodeSubject = new Subject<{ nodeData: string }>();
-  private updateUsersSubject = new Subject<{ username: string; type: UserUpdateType; }>();
+  private updateUsersSubject = new Subject<{ username: string; type: UserUpdateType }>();
   private authConfirmedSubject = new Subject<void>();
 
   updateCursors$ = this.updateCursorsSubject.asObservable();
@@ -21,8 +22,8 @@ export class WebsocketService {
 
   constructor() {}
 
-  connect(url :string, token: string): void {
-this.websocket = new WebSocket(this.websocketEndpoint);
+  connect(url: string, token: string): void {
+    this.websocket = new WebSocket(this.websocketEndpoint);
 
     this.websocket.onopen = () => {
       console.log('WebSocket connection established');
@@ -34,28 +35,26 @@ this.websocket = new WebSocket(this.websocketEndpoint);
       console.log('Received message: ', message);
 
       if (message.startsWith('Welcome ')) {
-        //console.log('Successfully authenticated at server!');
         this.authConfirmedSubject.next();
       } else if (message.startsWith('S:c=')) {
-        //console.log('Successfully changed active canvas to ' + message.substring(4));
+        // Handle canvas change confirmation
       } else if (message.startsWith('UC')) {
         // Handle UpdateCursors event
-        const cursorData = this.parseCursorUpdate(message.substring(2));
-        this.updateCursorsSubject.next({ cursors: cursorData });
+        const cursors = this.parseCursorData(message.substring(2));
+        this.updateCursorsSubject.next(cursors);
       } else if (message.startsWith('UN')) {
         // Handle UpdateNode event
         const nodeData = message.substring(2);
         this.updateNodeSubject.next({ nodeData });
-      } else if(message.startsWith('UU')) {
+      } else if (message.startsWith('UU')) {
         const username = message.substring(4).split(' ')[0];
-          if (message.charAt(2) === 'J') {
-            this.updateUsersSubject.next({ username, type: UserUpdateType.JOIN });
-          } else if (message.charAt(2) === 'L') {
-            this.updateUsersSubject.next({ username, type: UserUpdateType.LEAVE });
-          }
+        if (message.charAt(2) === 'J') {
+          this.updateUsersSubject.next({ username, type: UserUpdateType.JOIN });
+        } else if (message.charAt(2) === 'L') {
+          this.updateUsersSubject.next({ username, type: UserUpdateType.LEAVE });
+        }
       }
     };
-
 
     this.websocket.onerror = (error) => {
       console.error('WebSocket Error: ', error);
@@ -66,14 +65,24 @@ this.websocket = new WebSocket(this.websocketEndpoint);
     };
   }
 
-private parseCursorUpdate(data: string): Array<{ x: number; y: number; username: string }> {
-    return data.split(';').map((item) => {
-      const [x, y, username] = item.split(',');
-      return { x: +x, y: +y, username };
-    });
+  private parseCursorData(data: string): Cursor[] {
+    // Split the data by semicolon to get individual user entries
+    const entries = data.split(';');
+    
+    // Filter out invalid or empty entries and map each valid entry into a Cursor object
+    return entries
+      .filter(entry => entry.trim() !== '' && entry.includes(',')) // Exclude empty strings and invalid entries
+      .map(entry => {
+        const [name, x, y] = entry.split(','); // Split each entry by comma
+        return {
+          name: name.trim(),
+          x: parseFloat(x), // Parse x as a float number
+          y: parseFloat(y), // Parse y as a float number
+        } as Cursor;
+      })
+      .filter(cursor => !isNaN(cursor.x) && !isNaN(cursor.y)); // Exclude invalid numbers
   }
 
-  // Send a message to the WebSocket server
   sendMessage(message: string): void {
     if (this.websocket.readyState === WebSocket.OPEN) {
       this.websocket.send(message);
@@ -83,19 +92,18 @@ private parseCursorUpdate(data: string): Array<{ x: number; y: number; username:
     }
   }
 
-  sendCursorUpdate(x :number, y :number) {
-    this.sendMessage('UC:'+x+','+y);
+  sendCursorUpdate(x: number, y: number) {
+    this.sendMessage(`UC:${x},${y}`);
   }
 
-  sendNodeUpdate(nodeData :string) {
-    this.sendMessage('UN:${nodeData}');
+  sendNodeUpdate(nodeData: string) {
+    this.sendMessage(`UN:${nodeData}`);
   }
 
   sendCanvasIdUpdate(canvasID: string): void {
     this.sendMessage(`cId:${canvasID}`);
   }
 
-  // Close the WebSocket connection
   disconnect(): void {
     if (this.websocket) {
       this.websocket.close();

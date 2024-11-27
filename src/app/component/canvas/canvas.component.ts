@@ -10,6 +10,7 @@ import {AuthService} from "../../service/auth.service";
 import {WebsocketService} from "../../service/websocket.service";
 import {fromEvent, throttleTime, Subscription} from "rxjs";
 import { UserUpdateType } from 'src/app/dto/userUpdateType';
+import { Cursor } from 'src/app/dto/cursor';
 
 @Component({
   selector: 'app-canvas',
@@ -37,6 +38,7 @@ export class CanvasComponent implements AfterViewInit {
   private isMouseOverCanvas = false;
   private intervalId: any = null; // To store the interval ID
   private subscriptions: Subscription = new Subscription();
+  private activeCursors :Cursor[] = [];
 
     ngOnDestroy(): void {
       // Clean up subscriptions and disconnect WebSocket
@@ -60,8 +62,9 @@ export class CanvasComponent implements AfterViewInit {
           })
         );
         this.subscriptions.add(
-          this.websocketService.updateCursors$.subscribe((data) => {
-            console.log('Cursor positions updated:', data.cursors);
+          this.websocketService.updateCursors$.subscribe((cursorList) => {
+            //console.log('Cursor positions updated:', cursorList);
+            this.updateActiveCursors(cursorList);
           })
         );
 
@@ -453,5 +456,53 @@ export class CanvasComponent implements AfterViewInit {
       this.websocketService.sendCursorUpdate(event.x - canPos.x, event.y - canPos.y)
     }
 
+  }
+
+
+  private parseCursorData(packet: string): Cursor[] {
+    // Check if the packet starts with "UC:"
+    if (!packet.startsWith('UC:')) {
+      console.error('Invalid packet format');
+      return [];
+    }
+  
+    // Remove the "UC:" prefix
+    const payload = packet.slice(3);
+  
+    // Split the payload into individual cursor entries
+    const entries = payload.split(';');
+  
+    // Map entries to Canvas objects
+    const cursors: Cursor[] = entries.map(entry => {
+      const [name, x, y] = entry.split(',');
+  
+      return {
+        name,
+        x: Number(x),
+        y: Number(y),
+      };
+    });
+  
+    return cursors;
+  }
+
+  private updateActiveCursors(newCursors: Cursor[]): void {
+    newCursors.forEach(newCursor => {
+      // Find the index of the existing cursor with the same username
+      const existingCursorIndex = this.activeCursors.findIndex(
+        cursor => cursor.name === newCursor.name
+      );
+  
+      if (existingCursorIndex !== -1) {
+        // If the cursor exists, update its position
+        this.activeCursors[existingCursorIndex] = newCursor;
+      } else {
+        // If the cursor doesn't exist, add it to the array
+        this.activeCursors.push(newCursor);
+      }
+    });
+  
+    // Optionally, log the updated state for debugging
+    console.log('Updated active cursors:', this.activeCursors);
   }
 }
