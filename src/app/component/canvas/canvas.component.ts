@@ -39,11 +39,11 @@ export class CanvasComponent implements AfterViewInit {
   private activeCursors :Cursor[] = [];
   private canvas!: any;
 
-    ngOnDestroy(): void {
-      // Clean up subscriptions and disconnect WebSocket
-      this.subscriptions.unsubscribe();
-      this.websocketService.disconnect();
-    }
+  ngOnDestroy(): void {
+    // Clean up subscriptions and disconnect WebSocket
+    this.subscriptions.unsubscribe();
+    this.websocketService.disconnect();
+  }
 
   ngOnInit() :void {
     const authToken = this.authService.getAuthToken();
@@ -51,15 +51,16 @@ export class CanvasComponent implements AfterViewInit {
       this.websocketService.connect('http://localhost:8080/canvasUpdatesBroadcast', authToken);
 
     const canvasId = this.route.snapshot.paramMap.get('id');
-        if (canvasId) {
-    //Subscribe to UpdateCursors event
+      if (canvasId) {
+  
 
-       this.subscriptions.add(
+        this.subscriptions.add(
           this.websocketService.authConfirmed$.subscribe(() => {
             //console.log('Authenticated successfully. Sending current canvas ID:', canvasId);
             this.websocketService.sendCanvasIdUpdate(canvasId);
           })
         );
+
         this.subscriptions.add(
           this.websocketService.updateCursors$.subscribe((cursorList) => {
             //console.log('Cursor positions updated:', cursorList);
