@@ -23,6 +23,7 @@ export class CanvasComponent implements AfterViewInit {
   @ViewChild('canvasContainer', { static: false }) canvasContainer!: ElementRef;
 
   private placeholderPath = '/assets/resources/placeholder_texture.png';
+  private currentNodeState: Map<number, NodeDto> = new Map();
 
   constructor(
     private route: ActivatedRoute,
@@ -34,11 +35,9 @@ export class CanvasComponent implements AfterViewInit {
   ) {
   }
 
-  private cursorPosition = { x: 0, y: 0 };
-  private isMouseOverCanvas = false;
-  private intervalId: any = null; // To store the interval ID
   private subscriptions: Subscription = new Subscription();
   private activeCursors :Cursor[] = [];
+  private canvas!: any;
 
     ngOnDestroy(): void {
       // Clean up subscriptions and disconnect WebSocket
@@ -72,6 +71,7 @@ export class CanvasComponent implements AfterViewInit {
         this.subscriptions.add(
           this.websocketService.updateNode$.subscribe((data) => {
             console.log('Node data updated:', data.nodeData);
+            this.handleNodeUpdate(JSON.parse(data.nodeData));
           })
         );
 
@@ -88,28 +88,29 @@ export class CanvasComponent implements AfterViewInit {
       }
   }
 
-  ngAfterViewInit(): void {
+  ngAfterViewInit() {
     //------ Canvas Setup ------------
     const canvasElement = document.querySelector('#canvasContainer') as HTMLElement;
     // Initialize the draw2d Canvas with the ID of a valid HTML element
-    const canvas = canvasElement ? new draw2d.Canvas(canvasElement.id) : null;
+    if (canvasElement) {
+      this.canvas = new draw2d.Canvas(canvasElement.id);
+    }
+    const canvasId = this.route.snapshot.paramMap.get('id');
+    if (canvasId) {
+      this.loadNodes(Number(canvasId));
+      this.getAndRenderEdges(Number(canvasId), this.canvas);
+    }
     //--------------------------------
-
-
-
 
     //------- Form Setup -------------
     const form = <HTMLFormElement>document.querySelector('#node-form');
     const mcid_input = <HTMLInputElement>document.querySelector('#mcid-input');
     const screenX_input = <HTMLInputElement>document.querySelector('#screenX-input');
     const screenY_input = <HTMLInputElement>document.querySelector('#screenY-input');
-
     const delete_button = <HTMLButtonElement>document.querySelector('#delete-button');
 
 
-
-    // Get all Nodes
-    const canvasId = this.route.snapshot.paramMap.get('id');
+    // Render Canvas
     if (canvasId) {
       const canvasIdNum = Number(canvasId);
       const authToken = this.authService.getAuthToken();
@@ -121,48 +122,56 @@ export class CanvasComponent implements AfterViewInit {
               this.handleMouseMoveEvent(event, canvasElement);
             });
         }
-
-        this.getAndRenderNodes(canvasId, this.placeholderPath, canvas);
-        this.getAndRenderEdges(canvasIdNum, canvas);
+        this.loadNodes(Number(canvasId));
+        this.getAndRenderEdges(canvasIdNum, this.canvas);
 
 
         canvasElement?.addEventListener('mouseup', () => {
-          const currentNode = canvas.getPrimarySelection();
-          // Handle moved Node
-          console.log(currentNode);
-
-          if (currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label") {
-            // Enable deleteButton
-            delete_button.disabled = false;
+          const updatedNode = this.canvas.getPrimarySelection();
+          if (!updatedNode || updatedNode.cssClass === "draw2d_shape_basic_Label" || updatedNode.cssClass === "draw2d_Connection") {
+            return; // Ignore labels and connections
           }
+        
+          // Prepare the current node's data
+          const updatedNodeData: NodeDto = {
+            id: updatedNode.id,
+            mcId: updatedNode.children.data[0]?.figure.text || '',
+            pattern: null,
+            screenX: updatedNode.x,
+            screenY: updatedNode.y,
+            texture: null
+          };
+        
+          // Retrieve the current state
+          const currentState = this.currentNodeState.get(updatedNode.id);
+        
+          // Detect changes
+          const changes: Partial<NodeDto> = {};
+          if (!currentState || currentState.mcId !== updatedNodeData.mcId) {
+            changes.mcId = updatedNodeData.mcId;
+          }
+          if (!currentState || currentState.screenX !== updatedNodeData.screenX) {
+            changes.screenX = updatedNodeData.screenX;
+          }
+          if (!currentState || currentState.screenY !== updatedNodeData.screenY) {
+            changes.screenY = updatedNodeData.screenY;
+          }
+        
+          // If there are changes, send an update via WebSocket
+          if (Object.keys(changes).length > 0) {
+            changes.id = updatedNodeData.id; // Always include the node ID
+            const messageString = `${JSON.stringify(changes)}`;
+            this.websocketService.sendNodeUpdate(messageString);
 
-          // Exception for moving Labels and Connections
-          if (currentNode && currentNode.cssClass !== "draw2d_shape_basic_Label" && currentNode.cssClass !== "draw2d_Connection") {
-
-            // Get name of node from Label
-            mcid_input.value = currentNode.children.data[0].figure.text;
-
-            screenX_input.value = currentNode.x;
-            screenY_input.value = currentNode.y;
-
-            const texture = null;
-            const editedNode: NodeDto = new class implements NodeDto {
-              id: number = currentNode.id;
-              mcId: string = mcid_input.value;
-              pattern: null = null;
-              screenX: number = currentNode.x;
-              screenY: number = currentNode.y;
-              texture: string | null = texture;
-            }
-
-            this.nodeService.updateNode(editedNode).subscribe();
-          } else {
-            return;
+            this.nodeService.updateNode(updatedNodeData).subscribe();
+        
+            // Update the previous state with the current state
+            this.currentNodeState.set(updatedNode.id,  updatedNodeData);
           }
         });
 
         delete_button?.addEventListener('click', () => {
-          const selectedNode = canvas.getPrimarySelection();
+          const selectedNode = this.canvas.getPrimarySelection();
           let endpoint: string;
 
           if (selectedNode.cssClass === "draw2d_Connection") {
@@ -171,7 +180,7 @@ export class CanvasComponent implements AfterViewInit {
             endpoint = "/nodes";
           }
 
-          this.deleteNode(form, delete_button, canvas, selectedNode, endpoint);
+          this.deleteNode(form, delete_button, this.canvas, selectedNode, endpoint);
         })
 
         form.addEventListener('submit', e => {
@@ -197,9 +206,9 @@ export class CanvasComponent implements AfterViewInit {
           // -------------------
           this.nodeService.createFromForm(formData).subscribe({
             next: data => {
-              if (!canvas.getFigures().data.find((obj: any) => obj.children.data[0].figure.text === mcid_input.value)) {
+              if (!this.canvas.getFigures().data.find((obj: any) => obj.children.data[0].figure.text === mcid_input.value)) {
                 // figure.cssClass = "pixelated";
-                this.drawNode(canvas, mcid_input.value, shape, data.id);
+                this.drawNode(this.canvas, mcid_input.value, shape, data.id);
               } else {
                 // Handle duplicates
                 alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
@@ -207,35 +216,59 @@ export class CanvasComponent implements AfterViewInit {
               }
             }
           });
-          /*fetch(`http://localhost:8080/nodes`, {
-            method: "POST",
-            body: formData,
-          })
-          .then(response => response.json())
-          .then(result => {
-            console.log(result);
-
-            // Check if given minecraft ID already exists as a node
-            if(!canvas.getFigures().data.find((obj:any) => obj.children.data[0].figure.text === mcid_input.value)) {
-              // figure.cssClass = "pixelated";
-              this.drawNode(canvas, mcid_input.value, shape, result.id);
-            } else {
-              // Handle duplicates
-              alert(`The Node "${mcid_input.value}" already exists! Idiot...`)
-              return;
-            }
-
-          })
-          .catch(er => {
-            console.log(er);
-            return false;
-          })*/
         })
       }
     }
   }
 
+  loadNodes(canvasId :number) {
+    //this.logCurrentNodesList();
+    this.currentNodeState.clear();
+    this.nodeService.getNodesOfCanvas(canvasId).subscribe({
+      next: data => {
+        data.forEach(node => {
+          console.log('Adding node to current nodes: ' + JSON.stringify(node))
+          this.currentNodeState.set(node.id, node);
+        })
+        //this.logCurrentNodesList();
+        this.renderNodes(this.canvas);
+      }
+    });
+  }
+
+  private renderNodes(canvas: any): void {
+    // Clear the canvas before rendering
+    canvas.clear();
+  
+    // Iterate over the current state and render all nodes
+    this.currentNodeState.forEach((node) => {
+      const texturePath = node.texture
+        ? `data:image/png;base64,${node.texture}`
+        : this.placeholderPath;
+  
+      const shape = new draw2d.shape.basic.Image({
+        id: node.id,
+        width: 48,
+        height: 48,
+        x: node.screenX,
+        y: node.screenY,
+        path: texturePath,
+        resizeable: false,
+        cssClass: 'pixelated',
+      });
+  
+      this.drawNode(canvas, node.mcId, shape, node.id);
+    });
+  
+    // Re-render all edges
+    this.getAndRenderEdges(Number(this.route.snapshot.paramMap.get('id')), canvas);
+  }
+
   private getAndRenderEdges(canvasIdNum: number, canvas: any | null) {
+    if (!canvas) {
+      console.error("Canvas is null. Cannot render edges.");
+      return;
+    }
     // Get all Edges
     this.edgeService.getEdgesOfCanvas(canvasIdNum).subscribe({
       next: (edges) => {
@@ -255,6 +288,7 @@ export class CanvasComponent implements AfterViewInit {
               if (sourcePort && targetPort) {
                 // Create and configure the connection
                 const con = new draw2d.Connection();
+                con.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
                 con.id = edge.id;
                 con.setSource(sourcePort);
                 con.setTarget(targetPort);
@@ -276,32 +310,6 @@ export class CanvasComponent implements AfterViewInit {
         console.error("Failed to load edges:", error);
       }
     });
-  }
-
-  private getAndRenderNodes(canvasId: string, placeholderPath: string, canvas: any | null) {
-    this.nodeService.getNodesOfCanvas(Number(canvasId)).subscribe({
-      next: (nodes) => {
-        if (nodes && nodes.length > 0) {
-          nodes.forEach((node) => {
-            const texturePath = node.texture
-              ? 'data:image/png;base64,' + node.texture
-              : placeholderPath;
-            const shape = new draw2d.shape.basic.Image({
-              id: node.id,
-              width: 48,
-              height: 48,
-              x: node.screenX,
-              y: node.screenY,
-              path: texturePath,
-              resizeable: false,
-              cssClass: 'pixelated',
-            });
-            this.drawNode(canvas, node.mcId, shape);
-          })
-
-        }
-      }
-    })
   }
 
   drawNode(canvas: any, mcId: any, shape: any, shapeId: any = null): Boolean {
@@ -327,12 +335,6 @@ export class CanvasComponent implements AfterViewInit {
         //TODO: fix this part so edges can be created again without doing so when loading a canvas
         const startNode = emitterPort.getConnections().data.pop().sourcePort.parent;
         const endNode = emitterPort.parent;
-        
-        /*const formData = new FormData();
-        formData.append("from", startNode.id);
-        formData.append("to", endNode.id);
-        formData.append("amount", "1"); // Temporary hardcoded value
-        formData.append("canvasId", "-1");*/
         const canvasId = this.route.snapshot.paramMap.get('id');
         const edge :Edge = {
           id: 0,
@@ -343,19 +345,6 @@ export class CanvasComponent implements AfterViewInit {
         }
         
         this.edgeService.postEdge(edge).subscribe();
-        /*fetch(`http://localhost:8080/edges`, {
-          method: "POST",
-          body: formData,
-          })
-          .then(response => response.json())
-          .then(result => {
-            // Handle response
-            connection.connection.id = result.id;
-            })
-            .catch(er => {
-              console.log(er);
-              })*/
-             // this.sendRequest("/edges", "POST", formData);
         });
       }, 500);
     //----------------------------------------------------------------------------------------------------
@@ -385,8 +374,6 @@ export class CanvasComponent implements AfterViewInit {
     } else {
       this.edgeService.deleteEdge(node.id).subscribe();
     }
-    //this.sendRequest(endpoint, "DELETE", formData);
-
     // Clear form
     form.reset();
 
@@ -396,25 +383,6 @@ export class CanvasComponent implements AfterViewInit {
     return true;
 
 
-  }
-
-  sendRequest(endpoint :String, method :string, formData :FormData) :Boolean {
-    fetch(`http://localhost:8080${endpoint}`, {
-      method: method,
-      body: formData,
-    })
-    .then(response => response.text())
-    .then(result => {
-      // Handle response
-      console.log(result);
-
-    })
-    .catch(er => {
-      console.log(er);
-      return false;
-    })
-
-    return true;
   }
 
   getCanvasDocumentCoordinates(canvas :HTMLElement): { y: number; x: number; width: number; height: number } | null {
@@ -456,35 +424,6 @@ export class CanvasComponent implements AfterViewInit {
     if(canPos) {
       this.websocketService.sendCursorUpdate(event.x - canPos.x, event.y - canPos.y)
     }
-
-  }
-
-
-  private parseCursorData(packet: string): Cursor[] {
-    // Check if the packet starts with "UC:"
-    if (!packet.startsWith('UC:')) {
-      console.error('Invalid packet format');
-      return [];
-    }
-  
-    // Remove the "UC:" prefix
-    const payload = packet.slice(3);
-  
-    // Split the payload into individual cursor entries
-    const entries = payload.split(';');
-  
-    // Map entries to Canvas objects
-    const cursors: Cursor[] = entries.map(entry => {
-      const [name, x, y] = entry.split(',');
-  
-      return {
-        name,
-        x: Number(x),
-        y: Number(y),
-      };
-    });
-  
-    return cursors;
   }
 
   private updateActiveCursors(newCursors: Cursor[]): void {
@@ -514,5 +453,74 @@ export class CanvasComponent implements AfterViewInit {
     // Optionally log the updated state for debugging
     console.log('Updated active cursors after removal:', this.activeCursors);
   }
+
+  private handleNodeUpdate(updatedNode: NodeDto): void {
+    // Update the node in the state map
+    this.currentNodeState.set(updatedNode.id, updatedNode);
   
+    // Get the canvas
+    const canvasElement = document.querySelector('#canvasContainer') as HTMLElement;
+    if (!canvasElement) return;
+  
+    // Clear the node and its dependencies (edges)
+    const canvas = this.canvas; // Use the initialized `draw2d` canvas
+    const existingNode = canvas.getFigure(updatedNode.id);
+  
+    if (existingNode) {
+      // Remove node and its edges
+      existingNode.getConnections().data.forEach((connection: any) => canvas.remove(connection));
+      canvas.remove(existingNode);
+    }
+    // Re-render the updated node
+    const texturePath = updatedNode.texture
+        ? `data:image/png;base64,${updatedNode.texture}`
+        : this.placeholderPath;
+
+    const newNodeShape = new draw2d.shape.basic.Image({
+      id: updatedNode.id,
+      width: 48,
+      height: 48,
+      x: updatedNode.screenX,
+      y: updatedNode.screenY,
+      path: texturePath,
+      resizeable: false,
+      cssClass: 'pixelated',
+    });
+
+    this.drawNode(canvas, updatedNode.mcId, newNodeShape, updatedNode.id);
+
+    // Re-render the edges connected to this node
+    this.renderEdgesForNode(updatedNode.id);
+  }
+
+private renderEdgesForNode(nodeId: number): void {
+  const canvas = this.canvas;
+
+  // Find edges where this node is the source or target
+  this.edgeService.getEdgesOfCanvas(Number(this.route.snapshot.paramMap.get('id')))
+    .subscribe((edges: Edge[]) => {
+      edges.forEach((edge) => {
+        if (edge.nodeFrom === nodeId || edge.nodeTo === nodeId) {
+          const sourceNode = canvas.getFigure(edge.nodeFrom);
+          const targetNode = canvas.getFigure(edge.nodeTo);
+
+          if (sourceNode && targetNode) {
+            const sourcePort = sourceNode.getOutputPort(0);
+            const targetPort = targetNode.getInputPort(0);
+
+            if (sourcePort && targetPort) {
+              const connection = new draw2d.Connection();
+              connection.setTargetDecorator(new draw2d.decoration.connection.ArrowDecorator());
+              connection.id = edge.id;
+              if(this.canvas) {
+                connection.setSource(sourcePort);
+                connection.setTarget(targetPort);
+                canvas.add(connection);
+              }
+            }
+          }
+        }
+      });
+    });
+  }
 }

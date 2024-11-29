@@ -44,7 +44,7 @@ export class WebsocketService {
         this.updateCursorsSubject.next(cursors);
       } else if (message.startsWith('UN')) {
         // Handle UpdateNode event
-        const nodeData = message.substring(2);
+        const nodeData = message.substring(3);
         this.updateNodeSubject.next({ nodeData });
       } else if (message.startsWith('UU')) {
         const username = message.substring(4).split(' ')[0];
