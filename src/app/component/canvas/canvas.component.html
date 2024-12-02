@@ -1,16 +1,14 @@
 <!-- <app-node-form></app-node-form> -->
-
-<div>
+<div id="form-div">
   <form action="#" method="post" class="form" id="node-form">
     <input type="text" name="mcId" id="mcid-input" placeholder="Minecraft ID">
     <input type="number" name="screenX" id="screenX-input">
     <input type="number" name="screenY" id="screenY-input">
-    <input type="submit" value="Add Node">
-    <input type="button" value="Delete" id="delete-button" disabled>
+    <input type="submit" value="Add Node" class="btn btn-success">
+    <input type="button" value="Delete" id="delete-button" disabled class="btn btn-danger">
   </form>
   <button class="btn btn-primary"
   (click)="generateSources()">Generate Sources</button>
 </div>
-
 
 <div id="canvasContainer" class="canvas-container"></div>

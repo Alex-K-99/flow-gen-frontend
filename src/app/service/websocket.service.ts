@@ -26,13 +26,13 @@ export class WebsocketService {
     this.websocket = new WebSocket(this.websocketEndpoint);
 
     this.websocket.onopen = () => {
-      console.log('WebSocket connection established');
+      // console.log('WebSocket connection established');
       this.sendMessage(token.substring(7));
     };
 
     this.websocket.onmessage = (event) => {
       const message = event.data.toString();
-      console.log('Received message: ', message);
+      // console.log('Received message: ', message);
 
       if (message.startsWith('Welcome ')) {
         this.authConfirmedSubject.next();
@@ -86,7 +86,7 @@ export class WebsocketService {
   sendMessage(message: string): void {
     if (this.websocket.readyState === WebSocket.OPEN) {
       this.websocket.send(message);
-      console.log('Sent message: ', message);
+      // console.log('Sent message: ', message);
     } else {
       console.error('WebSocket is not open');
     }

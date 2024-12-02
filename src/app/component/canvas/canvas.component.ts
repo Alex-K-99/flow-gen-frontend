@@ -127,11 +127,19 @@ export class CanvasComponent implements AfterViewInit {
         this.getAndRenderEdges(canvasIdNum, this.canvas);
 
 
-        canvasElement?.addEventListener('mouseup', () => {
+        this.canvas?.on('select', () => {
           const updatedNode = this.canvas.getPrimarySelection();
-          if (!updatedNode || updatedNode.cssClass === "draw2d_shape_basic_Label" || updatedNode.cssClass === "draw2d_Connection") {
-            return; // Ignore labels and connections
+          
+          
+          if (!updatedNode 
+            || updatedNode.cssClass === "draw2d_shape_basic_Label" 
+            || updatedNode.cssClass === "draw2d_Connection"
+            || updatedNode.cssClass === "draw2d_shape_icon_Contract"
+            || updatedNode.cssClass === "draw2d_shape_icon_Expand"
+          ) {
+            return; // Ignore labels and connections (+Contract/Expand Icons)
           }
+          console.log(updatedNode);
         
           // Prepare the current node's data
           const updatedNodeData: NodeDto = {
@@ -186,9 +194,8 @@ export class CanvasComponent implements AfterViewInit {
 
         form.addEventListener('submit', e => {
           e.preventDefault();
-          // Example: Adding a square to the canvas
+          // Define dimensions, default position and styling of the new node
           const shape = new draw2d.shape.basic.Image({
-            // id: mcid_input.value,
             width: 50,
             height: 50,
             x: 100,
@@ -196,7 +203,6 @@ export class CanvasComponent implements AfterViewInit {
             path: this.placeholderPath,
             cssClass: 'pixelated',
           });
-
 
           // Fill form inputs before constructing new FormData to make sure that no error is in result
           screenX_input.value = shape.x;
@@ -228,7 +234,7 @@ export class CanvasComponent implements AfterViewInit {
     this.nodeService.getNodesOfCanvas(canvasId).subscribe({
       next: data => {
         data.forEach(node => {
-          console.log('Adding node to current nodes: ' + JSON.stringify(node))
+          // console.log('Adding node to current nodes: ' + JSON.stringify(node))
           this.currentNodeState.set(node.id, node);
         })
         //this.logCurrentNodesList();
@@ -293,6 +299,13 @@ export class CanvasComponent implements AfterViewInit {
                 con.id = edge.id;
                 con.setSource(sourcePort);
                 con.setTarget(targetPort);
+
+                let label = new draw2d.shape.basic.Label({
+                  text: edge.amount,
+                });
+                label.installEditor(new draw2d.ui.LabelEditor());
+                con.add(label, new draw2d.layout.locator.ManhattanMidpointLocator());
+
                 canvas.add(con);
               } else {
                 console.warn(
@@ -350,15 +363,66 @@ export class CanvasComponent implements AfterViewInit {
       }, 500);
     //----------------------------------------------------------------------------------------------------
 
+    // Set shape.id so it matches id given by Database
     if (shapeId) {
       shape.id = shapeId;
     }
 
+    // Add Label with Name (mcId) of Node
     shape.add(new draw2d.shape.basic.Label({
       text: mcId,
       x: 0,
       y: -25
-    }), new draw2d.layout.locator.DraggableLocator());
+    }), new draw2d.layout.locator.TopLocator());
+
+    // Add Crafting Grid
+    // Add clickable icon to Node (extend/contract crafting grid)-------------
+    const hideGridIcon = new draw2d.shape.icon.Contract({ 
+      minWidth:15, 
+      minHeight:15, 
+      width:15, 
+      height:15,
+      x: 50 - 20, // parent_shape_width - self_width 
+      y: 50 - 20, // parent_shape_height - self_height
+      visible:false,
+    });
+    const showGridIcon = new draw2d.shape.icon.Expand({
+      minWidth:15, 
+      minHeight:15, 
+      width:15, 
+      height:15, 
+      x: 50 - 20, // parent_shape_width - self_width 
+      y: 50 - 20, // parent_shape_height - self_height
+    });
+
+    const toggle = () => {
+      hideGridIcon.setVisible(!hideGridIcon.isVisible());
+      showGridIcon.setVisible(!showGridIcon.isVisible());
+
+      // Handle Crafting grid (god have mercy)
+      // Define Container
+      const craftingGridContainer :any = new draw2d.shape.layout.VerticalLayout();
+      
+      
+      const craftingGridCell :any = new draw2d.shape.basic.Image();
+      /*
+      Container
+      Row -> Cell | Cell | Cell
+      Row -> Cell | Cell | Cell
+      Row -> Cell | Cell | Cell
+      */
+      
+      //-----------------------------------------------------------------------------------------------------
+
+    }
+    hideGridIcon.on("click", toggle);
+    showGridIcon.on("click", toggle);
+
+    // TODO: Custom Locator for aesthetic reasons
+    shape.add(hideGridIcon, new draw2d.layout.locator.BottomLocator());
+    shape.add(showGridIcon, new draw2d.layout.locator.BottomLocator());
+    //----------------------------------
+
 
     canvas.add(shape);
     return true;
@@ -444,7 +508,7 @@ export class CanvasComponent implements AfterViewInit {
     });
   
     // Optionally, log the updated state for debugging
-    console.log('Updated active cursors:', this.activeCursors);
+    // console.log('Updated active cursors:', this.activeCursors);
   }
 
   private removeActiveCursor(username: string): void {
